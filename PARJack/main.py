@@ -72,15 +72,14 @@ class Player():
   def addBalance(self, balance):
     self.balance = self.balance + balance
 
-  def startMatch(self, deck: Mazo):
+  def getHand(self, deck: Mazo):
     """
     Inicia una nueva partida para el jugador, repartiendo una o dos cartas dependiendo de si es croupier o no.
     """
     if (self.isCroupier):
       self.hands[0].getCard(deck)
     else:
-      self.hands[0].getCard(deck)
-      self.hands[0].getCard(deck)
+      self.hands[0].getCard(deck, 2)
 
   def showHands(self):
     lines = [[], [], [], []]
@@ -154,14 +153,15 @@ class Hand():
     self.bet = bet
 
 
-  def getCard(self, mazo: Mazo):
+  def getCard(self, mazo: Mazo, amount: int = 1):
     """
     Añade una carta a la mano del jugador.
 
     Args:
         carta (Carta): La carta a añadir.
     """
-    self.cards.append(mazo.reparte())
+    for _ in range(amount):
+      self.cards.append(mazo.reparte())
 
 
 
@@ -200,9 +200,9 @@ class Game():
     """
     Inicia una nueva partida.
     """
-    self.croupier.startMatch(self.deck)
+    self.croupier.getHand(self.deck)
     for player in self.players:
-      player.startMatch(self.deck)
+      player.getHand(self.deck)
     self.showTable()
   
   def showTable(self):
@@ -261,7 +261,7 @@ class Game():
     print("TURNO DEL CROUPIER")
     while (self.croupier.hands[0].getValue() < 17):
       self.croupier.showHands()
-      time.sleep(1)
+      time.sleep(2)
       self.croupier.hands[0].getCard(self.deck)
 
       if (self.croupier.hands[0].getValue() > 21):
@@ -272,7 +272,7 @@ class Game():
       self.croupier.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
 
     self.croupier.showHands()
-    time.sleep(2)
+    time.sleep(3)
     os.system("cls")
     print("TABLERO FINAL")
     self.showTable()
@@ -323,7 +323,7 @@ croupier = Player("Croupier", isCroupier=True)
 
 bet = askBet()
 
-player = Player("Huguito", bet)
+player = Player("Mano", bet)
 
 
 game = Game([player], croupier, deck)
@@ -340,6 +340,8 @@ game.showTable()
 game.playersTurn()
 game.croupierTurn()
 game.countResult()
+# TODO: Si el jugador se ha pasado en todas sus manos, el crupier no pide carta
 # TODO: Si hay blackjack no juega el crupier, cambiar de clase el metodo blackjack()
+# TODO: Solucionar lo del valor default de Hand de cards, hacerlo como el video de malas prácticas
 #print("\nTURNO DEL JUGADOR")
 
