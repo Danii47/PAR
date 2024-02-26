@@ -6,7 +6,6 @@
     Atención: En este código se usan type hints para ayudar a documentar el código, pero
     vosotros no estais obligados a usarlo
 """
-import random
 
 class Estrategia(object):
     """ Clase que representa una estrategia de juego para el Blackjack
