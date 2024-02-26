@@ -8,25 +8,6 @@
 """
 import random
 
-
-class CartaBase(object):
-    """ Clase minimalista que representa una carta de la baraja
-        Debería crearse una clase que herede de esta
-    """
-    def __init__(self, ind: int) -> None:
-        """ Crea la carta con ese índice (0-51)
-        :param ind: El índice de la carta
-        """
-        self.ind = ind
-
-    @property
-    def valor(self) -> int:
-        """
-        :return: Valor facial de la carta (1-10). Los ases devuelven 1.
-        """
-        return min(10, self.ind % 13 + 1)
-
-
 class Estrategia(object):
     """ Clase que representa una estrategia de juego para el Blackjack
         Basada en el libro que muestra Alan en Resacón en las Vegas

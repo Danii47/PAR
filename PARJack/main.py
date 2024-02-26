@@ -1,4 +1,4 @@
-from externo import CartaBase, Estrategia
+from externo import Estrategia
 import time
 import os
 import random
@@ -32,7 +32,7 @@ HAND_STATE_DICTIONARY = {
   "PASADA": "PASADA"
 }
 
-class Card(CartaBase):
+class Card():
   def __init__(self, ind):
     self.ind = ind
 
