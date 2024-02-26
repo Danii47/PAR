@@ -420,7 +420,7 @@ if __name__ == "__main__":
     game.countResult()
     continuePlaying = game.restartGame()
   
-  
+# TODO: Tipar todos los métodos
 # TODO: Mostrar balance al iniciar cada partida
 # TODO: Añadir el mensaje de barajando (dar más feedback al usuario)
 # TODO: Si hay blackjack no juega el crupier, cambiar de clase el metodo blackjack() ✅
