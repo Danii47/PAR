@@ -36,7 +36,10 @@ class Card(CartaBase):
   def __init__(self, ind):
     self.ind = ind
 
-  def toString(self):
+  def getValue(self) -> int:
+    return min(10, self.ind % 13 + 1)
+
+  def toString(self) -> str:
     return CARDS_DICTIONARY[self.ind % 13 + 1]
   
   def getType(self):
@@ -88,7 +91,7 @@ class Player():
     self.name = name
     self.isCroupier = isCroupier
     self.balance = 0
-    self.hands = [Hand(bet = self.askBet() if not isCroupier else 0)]
+    self.hands = [Hand()]
     self.isBlackjack = False
   
   def getName(self):
@@ -108,8 +111,13 @@ class Player():
 
   def resetPlayer(self):
     self.isBlackjack = False
-    self.hands = [Hand(bet = self.askBet() if not self.isCroupier else 0)]
+    self.resetHands()
 
+  def resetHands(self):
+    self.hands = [Hand()]
+
+  def setInitialBet(self, bet):
+    self.hands[0].setBet(bet)
 
   def askBet(self):
     bet = 0
@@ -117,7 +125,7 @@ class Player():
 
       try:
 
-        bet = input(f"¿Apuesta de {self.name}? [2] [10] [50]: ")
+        bet = input(f"\n¿Apuesta de {self.name}? [2] [10] [50]: ")
 
         if bet == "":
           bet = 10
@@ -125,9 +133,9 @@ class Player():
           bet = int(bet)
 
         if (bet != 2 and bet != 10 and bet != 50):
-          print("Apuesta no valida.\n")
+          print("Apuesta no válida.\n")
       except ValueError:
-        print("Apuesta no valida.\n")
+        print("Apuesta no válida.\n")
 
     return bet
 
@@ -138,8 +146,8 @@ class Player():
     if (self.isCroupier):
       self.hands[0].giveCard(deck)
     else:
-      self.hands[0].giveCard(deck, 2)
       # self.hands[0].giveCard(deck, 2)
+      self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
 
   def showHands(self):
     lines = [[], [], [], []]
@@ -174,7 +182,7 @@ class Player():
       print(" ".join(line))
     print()
 
-  def split(self, handNumber: int):
+  def splitHand(self, handNumber: int):
     handToSplit = self.hands[handNumber]
     self.hands.append(Hand([handToSplit.cards.pop()], HAND_STATE_DICTIONARY["ABIERTA"], handToSplit.bet, handToSplit.getId() + "B"))
     handToSplit.setId(handToSplit.getId() + "A")
@@ -215,19 +223,18 @@ class Hand():
   def giveCard(self, deck: Deck, amount: int = 1):
     for _ in range(amount):
       self.cards.append(deck.dropCard())
+      
 
   def getValue(self):
     handValue: int = 0
     for card in self.cards:
-      if (card.valor == 1) and (handValue + 11 <= 21):
+      if (card.getValue() == 1) and (handValue + 11 <= 21):
         handValue += 11
       else:
-        handValue += card.valor
+        handValue += card.getValue()
     return handValue
   
 
-  
-    
 class Game():
   """
   Esta es la clase Game. Esta clase representa el juego en sí.
@@ -244,6 +251,9 @@ class Game():
     self.players = players
     self.croupier = croupier
     self.deck = deck
+    self.areAllHandsPassed = False
+    self.gameBlackjack = False
+    self.gameNumber = 1
   
   def startGame(self):
     """
@@ -252,24 +262,19 @@ class Game():
     os.system("cls")
     self.croupier.giveHand(self.deck)
     for player in self.players:
+      print(f"--- INICIO DE LA PARTIDA #{self.gameNumber} --- BALANCE = {"+" if player.getBalance() > 0 else ""}{player.getBalance()} €")
+      player.setInitialBet(player.askBet())
+      os.system("cls")
       player.giveHand(self.deck)
-
       if player.hands[0].getValue() == 21:
         player.setIsBlackjack(True)
-        
-        
+        self.gameBlackjack = True
 
-    print("\nREPARTO INICIAL")
+
+    print("REPARTO INICIAL")
     self.showTable()
-  
-  def comprobateBlackjack(self):
-    blackjack: bool = False
-
-    for player in self.players:
-      if player.getIsBlackjack():
-        blackjack = True
-
-    return blackjack
+    time.sleep(2)
+    os.system("cls")
 
   def showTable(self):
     self.croupier.showHands()
@@ -278,20 +283,22 @@ class Game():
 
   def playersTurn(self):
 
-    if not self.comprobateBlackjack():
+    if not self.gameBlackjack:
       for player in self.players:
 
         for i, hand in enumerate(player.hands):
 
           while hand.state == "ABIERTA":
-            print()
-            canSplitHand = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor
-            action = input(f"{player.name}{hand.id}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar:" if canSplitHand else ":"} ").upper()
+            print(f"TURNO DE {player.name.upper()}")
+            self.showTable()
+            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue()
+            action: str = input(f"{player.name}{hand.id}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar:" if canSplitHand else ":"} ").upper()
+            os.system("cls")
             if action == "P" or action == "":
               hand.giveCard(self.deck)
               if (hand.getValue() > 21):
                 hand.setState(HAND_STATE_DICTIONARY["PASADA"])
-              player.showHands()
+              self.showTable()
 
             elif action == "D":
               hand.giveCard(self.deck)
@@ -300,92 +307,107 @@ class Game():
                 hand.setState(HAND_STATE_DICTIONARY["PASADA"])
               else:
                 hand.setState(HAND_STATE_DICTIONARY["CERRADA"])
-              player.showHands()
+              self.showTable()
 
             elif action == "C":
               hand.setState(HAND_STATE_DICTIONARY["CERRADA"])
-              player.showHands()
-
+              self.showTable()
             
             elif action == "S" and canSplitHand:
-                player.split(i)
-                player.showHands()
+                player.splitHand(i)
+                self.showTable()
                 
             else:
               print("Acción no válida. Inténtalo de nuevo.\n")
-    else:
-      for player in self.players:
-        if player.getIsBlackjack():
-          print(f"\n*** BLACKJACK DE {player.getName().upper()} ***\n")
-          player.hands[0].setBet(int(player.hands[0].getBet() * (3 / 2)))
-          player.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
+            
+      self.setAreAllHandsPassed()
 
   
   # TODO: Preguntar si se permite más de un return en un método
-  def getAllHandsPassed(self):
+  def setAreAllHandsPassed(self):
     allHandsPassed = True
     for player in self.players:
       for hand in player.hands:
         if hand.getState() != HAND_STATE_DICTIONARY["PASADA"]:
           allHandsPassed = False
-    return allHandsPassed
+
+    self.areAllHandsPassed = allHandsPassed
 
   def croupierTurn(self):
-    if not self.comprobateBlackjack():
+    if not self.gameBlackjack:
+      time.sleep(3)
+      os.system("cls")
       print("TURNO DEL CROUPIER")
-      if not self.getAllHandsPassed():
+      if not self.areAllHandsPassed:
 
         while self.croupier.hands[0].getValue() < 17:
-          self.croupier.showHands()
+          self.showTable()
           time.sleep(2)
+          os.system("cls")
           self.croupier.hands[0].giveCard(self.deck)
 
           if self.croupier.hands[0].getValue() > 21:
             self.croupier.hands[0].setState(HAND_STATE_DICTIONARY["PASADA"])
+          print("TURNO DEL CROUPIER")
 
 
       if self.croupier.hands[0].getState() == HAND_STATE_DICTIONARY["ABIERTA"]:
         self.croupier.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
 
-      self.croupier.showHands()
+      self.showTable()
       time.sleep(3)
       
-    
+  def warnBlackjack(self):
+    for player in self.players:
+      if player.getIsBlackjack():
+        print(f"\n*** BLACKJACK DE {player.getName().upper()} ***")
+        player.hands[0].setBet(int(player.hands[0].getBet() * (3 / 2)))
+        player.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
+
   def showFinalTable(self):
     os.system("cls")
     print("TABLERO FINAL")
+    
+    if self.gameBlackjack:
+      player.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
+
     self.showTable()
+    
+    if self.gameBlackjack:
+      self.warnBlackjack()
+      
     time.sleep(3)
 
   def countResult(self):
+    os.system("cls")
     for player in self.players:
-      print(f"\nCONTABILIZACIÓN DE RESULTADOS {player.name}")
+      print(f"CONTABILIZACIÓN DE RESULTADOS {player.name}")
       totalProfit: str = 0
       for hand in player.hands:
         resultOfBet = hand.getBet()
 
         if (self.croupier.hands[0].getState() != HAND_STATE_DICTIONARY["PASADA"] and hand.getState() == HAND_STATE_DICTIONARY["PASADA"]) or (self.croupier.hands[0].getState() != HAND_STATE_DICTIONARY["PASADA"] and self.croupier.hands[0].getValue() > hand.getValue()):
           resultOfBet = -hand.getBet()
-        elif (self.croupier.hands[0].getState() == HAND_STATE_DICTIONARY["PASADA"] and hand.getState() == HAND_STATE_DICTIONARY["PASADA"]) or (self.croupier.hands[0].getValue() == hand.getValue()) or (self.comprobateBlackjack() and not player.getIsBlackjack()):
+        elif (self.croupier.hands[0].getState() == HAND_STATE_DICTIONARY["PASADA"] and hand.getState() == HAND_STATE_DICTIONARY["PASADA"]) or (self.croupier.hands[0].getValue() == hand.getValue()) or (self.gameBlackjack and not player.getIsBlackjack()):
           resultOfBet = 0
 
         totalProfit += resultOfBet
 
         print(f"* {self.croupier.getName()}: {self.croupier.hands[0].getValue()}, {player.getName()}{hand.getId()}: {hand.getValue()} -> {"+" if resultOfBet > 0 else ""}{resultOfBet}€")
       
-      print(f"\nResultado de la partida: {"+" if totalProfit > 0 else ""}{totalProfit}€ {"(PARTIDA CON BLACKJACK)" if self.comprobateBlackjack() and not player.getIsBlackjack() else ""}\n")
+      print(f"\nResultado de la partida: {"+" if totalProfit > 0 else ""}{totalProfit}€ {"(BLACKJACK)" if self.gameBlackjack and player.getIsBlackjack() else ""}")
       player.addBalance(totalProfit)
 
   def restartGame(self):
     print("\n\n¿Quieres jugar otra partida?")
     action = input("[S]í [N]o: ").upper()
-
     if action == "S":
+      os.system("cls")
+      self.gameNumber += 1
       self.croupier.resetPlayer()
       for player in self.players:
         player.resetPlayer()
       self.deck.resetDeck()
-
     else:
       print("\n¡Hasta la próxima!")
 
@@ -405,6 +427,8 @@ if __name__ == "__main__":
 
 
   croupier: Player = Player(name = "Croupier", isCroupier = True)
+  
+  print("A")
   player: Player = Player(name = "Mano")
 
   game: Game = Game(players = [player], croupier = croupier, deck = deck)
@@ -412,7 +436,6 @@ if __name__ == "__main__":
   continuePlaying: bool = True
 
   while continuePlaying:
-
     game.startGame()
     game.playersTurn()
     game.croupierTurn()
@@ -425,6 +448,6 @@ if __name__ == "__main__":
 # TODO: Añadir el mensaje de barajando (dar más feedback al usuario)
 # TODO: Si hay blackjack no juega el crupier, cambiar de clase el metodo blackjack() ✅
 # TODO: Si el jugador se ha pasado en todas sus manos, el crupier no pide carta ✅
-# TODO: Solucionar lo del valor default de Hand de cards, hacerlo como el video de malas prácticas ✅
+# TODO: Solucionar lo del getValue() default de Hand de cards, hacerlo como el video de malas prácticas ✅
 #print("\nTURNO DEL JUGADOR")
 
