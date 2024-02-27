@@ -4,15 +4,9 @@ import os
 import random
 
 class bcolors:
-  HEADER = '\033[95m'
-  OKBLUE = '\033[94m'
-  OKCYAN = '\033[96m'
-  OKGREEN = '\033[92m'
-  WARNING = '\033[93m'
   FAIL = '\033[91m'
+  BLACK = '\033[2;37m'
   ENDC = '\033[0m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
 
 
 CARDS_DICTIONARY = {
@@ -32,9 +26,9 @@ CARDS_DICTIONARY = {
 }
 
 CARD_TYPE_DICTIONARY = {
-  1: f"{bcolors.OKBLUE}♠{bcolors.ENDC}",
+  1: f"{bcolors.BLACK}♠{bcolors.ENDC}",
   2: f"{bcolors.FAIL}♥{bcolors.ENDC}",
-  3: f"{bcolors.OKBLUE}♣{bcolors.ENDC}",
+  3: f"{bcolors.BLACK}♣{bcolors.ENDC}",
   4: f"{bcolors.FAIL}♦{bcolors.ENDC}"
 }
 
@@ -178,7 +172,7 @@ class Player():
       for card in hand.cards:
         lines[0].append("╭───╮")
         lines[1].append(f"│{card.toString().rjust(3)}│")
-        lines[2].append(f"│{card.getType().ljust(3)}│")
+        lines[2].append(f"│{card.getType().ljust(len(card.getType()) + 2)}│") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
         lines[3].append("╰───╯")
       
       if (i < len(self.hands) - 1):
@@ -188,7 +182,11 @@ class Player():
 
     for line in lines:
       print(" ".join(line))
-    print()
+
+    # showHandsString: str = ""
+    # for line in lines:
+    #   showHandsString += " ".join(line) + "\n"
+    # print(showHandsString)
 
   def splitHand(self, handNumber: int):
     handToSplit = self.hands[handNumber]
@@ -307,14 +305,14 @@ class Game():
         for i, hand in enumerate(player.hands):
 
           while hand.state == "ABIERTA":
-            self.showTablePlayersTurn(playerName = player.name)
+            self.showTablePlayersTurn(playerName = player.getName())
             canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue()
-            action: str = input(f"{player.name}{hand.id}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar:" if canSplitHand else ":"} ").upper()
+            action: str = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar:" if canSplitHand else ":"} ").upper()
             if action == "P" or action == "":
               hand.giveCard(self.deck)
               if (hand.getValue() > 21):
                 hand.setState(HAND_STATE_DICTIONARY["PASADA"])
-                self.showTablePlayersTurn(playerName = player.name)
+                self.showTablePlayersTurn(playerName = player.getName())
 
             elif action == "D":
               hand.giveCard(self.deck)
@@ -403,6 +401,7 @@ class Game():
       print(f"CONTABILIZACIÓN DE RESULTADOS {player.name}")
       totalProfit: str = 0
       for hand in player.hands:
+
         resultOfBet = hand.getBet()
 
         if (self.croupier.hands[0].getState() != HAND_STATE_DICTIONARY["PASADA"] and hand.getState() == HAND_STATE_DICTIONARY["PASADA"]) or (self.croupier.hands[0].getState() != HAND_STATE_DICTIONARY["PASADA"] and self.croupier.hands[0].getValue() > hand.getValue()):
@@ -413,12 +412,11 @@ class Game():
         totalProfit += resultOfBet
 
         print(f"* {self.croupier.getName()}: {self.croupier.hands[0].getValue()}, {player.getName()}{hand.getId()}: {hand.getValue()} -> {"+" if resultOfBet > 0 else ""}{resultOfBet}€")
-      
       print(f"\nResultado de la partida: {"+" if totalProfit > 0 else ""}{totalProfit}€ {"(BLACKJACK)" if self.gameBlackjack and player.getIsBlackjack() else ""}")
       player.addBalance(totalProfit)
 
   def restartGame(self):
-    print("\n\n¿Quieres jugar otra partida?")
+    print(f"\n\n¿{"Quieres" if len(self.players) == 1 else "Quereis"} jugar otra partida?")
     action = input("[S]í [N]o: ").upper()
     if action == "S" or action == "":
       os.system("cls")
@@ -429,6 +427,10 @@ class Game():
         player.resetPlayer()
       self.deck.resetDeck()
     else:
+      os.system("cls")
+      print("REGISTRO FINAL DE BALANCE\n")
+      for player in self.players:
+        print(f"{player.getName()} -> {"+" if player.getBalance() > 0 else ""}{player.getBalance()}€")
       print("\n¡Hasta la próxima!")
 
     return True if action == "S" or action == "" else False
