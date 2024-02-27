@@ -3,11 +3,16 @@ import time
 import os
 import random
 
-class bcolors:
+class TERMINAL_COLORS:
   FAIL = '\033[91m'
   BLACK = '\033[2;37m'
-  ENDC = '\033[0m'
+  RESTART = '\033[0m'
 
+# TODO: Ver si debería hacer una clase para los estados de las manos
+class HAND_STATES:
+  ABIERTA = "ABIERTA"
+  CERRADA = "CERRADA"
+  PASADA = "PASADA"
 
 CARDS_DICTIONARY = {
   1: "A",
@@ -26,10 +31,10 @@ CARDS_DICTIONARY = {
 }
 
 CARD_TYPE_DICTIONARY = {
-  1: f"{bcolors.BLACK}♠{bcolors.ENDC}",
-  2: f"{bcolors.FAIL}♥{bcolors.ENDC}",
-  3: f"{bcolors.BLACK}♣{bcolors.ENDC}",
-  4: f"{bcolors.FAIL}♦{bcolors.ENDC}"
+  1: f"{TERMINAL_COLORS.BLACK}♠{TERMINAL_COLORS.RESTART}",
+  2: f"{TERMINAL_COLORS.FAIL}♥{TERMINAL_COLORS.RESTART}",
+  3: f"{TERMINAL_COLORS.BLACK}♣{TERMINAL_COLORS.RESTART}",
+  4: f"{TERMINAL_COLORS.FAIL}♦{TERMINAL_COLORS.RESTART}"
 }
 
 HAND_STATE_DICTIONARY = {
@@ -152,22 +157,25 @@ class Player():
       # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
 
   def showHands(self) -> None:
+
     lines: list[list[str]] = [[], [], [], []]
-    # TODO: SEGUIR TIPANDO
+
     for i, hand in enumerate(self.hands):
-      handNameLength = len(self.getName()) + len(hand.getId()) if (len(self.getName()) + len(hand.getId()) >= 8) else 8
+
+      handNameLength: int = len(self.getName()) + len(hand.getId())
+      handShift: int = handNameLength if (handNameLength >= 8) else 8 # 8 es la longitud de "Croupier", que es el nombre más largo
       
-      lines[0].append(f"{self.name}{hand.id}:".rjust(handNameLength + 1))
-      lines[1].append(f"({hand.getValue()})".rjust(handNameLength + 1))
+      lines[0].append(f"{self.name}{hand.id}:".rjust(handShift + 1))
+      lines[1].append(f"({hand.getValue()})".rjust(handShift + 1))
 
       if not self.isCroupier:
-        lines[2].append(f"{hand.bet}€".rjust(handNameLength + 1))
+        lines[2].append(f"{hand.getBet()}€".rjust(handShift + 1))
 
       if self.isCroupier:
-        lines[2].append(f"{hand.state}".rjust(handNameLength + 1))
-        lines[3].append("".rjust(handNameLength + 1))
+        lines[2].append(f"{hand.getState()}".rjust(handShift + 1))
+        lines[3].append("".rjust(handShift + 1))
       else:
-        lines[3].append(f"{hand.state}".rjust(handNameLength + 1))
+        lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
 
       for card in hand.cards:
         lines[0].append("╭───╮")
@@ -183,13 +191,9 @@ class Player():
     for line in lines:
       print(" ".join(line))
 
-    # showHandsString: str = ""
-    # for line in lines:
-    #   showHandsString += " ".join(line) + "\n"
-    # print(showHandsString)
 
   def splitHand(self, handNumber: int):
-    handToSplit = self.hands[handNumber]
+    handToSplit: Hand = self.hands[handNumber]
     self.hands.append(Hand([handToSplit.cards.pop()], HAND_STATE_DICTIONARY["ABIERTA"], handToSplit.bet, handToSplit.getId() + "B"))
     handToSplit.setId(handToSplit.getId() + "A")
 
@@ -208,36 +212,41 @@ class Hand():
     self.bet = bet
     self.id = id
   
-  def getBet(self):
+  def getBet(self) -> int:
     return self.bet
     
-  def getState(self):
+  def getState(self) -> str:
     return self.state
 
-  def getId(self):
+  def getId(self) -> str:
     return self.id
 
-  def setId(self, id: str):
+  def setId(self, id: str) -> None:
     self.id = id
 
-  def setState(self, state: str):
+  def setState(self, state: str) -> None:
     self.state = state
 
-  def setBet(self, bet: int):
+  def setBet(self, bet: int) -> None:
     self.bet = bet
 
-  def giveCard(self, deck: Deck, amount: int = 1):
+  def giveCard(self, deck: Deck, amount: int = 1) -> None:
     for _ in range(amount):
       self.cards.append(deck.dropCard())
-      
 
-  def getValue(self):
+  def getValue(self) -> int:
     handValue: int = 0
+    countOfAces: int = 0
+
     for card in self.cards:
-      if (card.getValue() == 1) and (handValue + 11 <= 21):
-        handValue += 11
-      else:
-        handValue += card.getValue()
+      handValue += card.getValue()
+      if card.getValue() == 1:
+        countOfAces += 1
+
+    for _ in range(countOfAces):
+      if handValue + 10 <= 21:
+        handValue += 10  
+
     return handValue
   
 
@@ -261,7 +270,7 @@ class Game():
     self.gameBlackjack = False
     self.gameNumber = 1
   
-  def startGame(self):
+  def startGame(self) -> None:
     """
     Inicia una nueva partida.
     """
@@ -287,17 +296,17 @@ class Game():
     time.sleep(2)
     os.system("cls")
 
-  def showTable(self):
+  def showTable(self) -> None:
     self.croupier.showHands()
     for player in self.players:
       player.showHands()
 
-  def showTablePlayersTurn(self, playerName: str):
+  def showTablePlayersTurn(self, playerName: str) -> None:
     os.system("cls")
     print(f"TURNO DE {playerName.upper()}")
     self.showTable()
 
-  def playersTurn(self):
+  def playersTurn(self) -> None:
 
     if not self.gameBlackjack:
       for player in self.players:
@@ -306,8 +315,10 @@ class Game():
 
           while hand.state == "ABIERTA":
             self.showTablePlayersTurn(playerName = player.getName())
+            
             canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue()
             action: str = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar:" if canSplitHand else ":"} ").upper()
+            
             if action == "P" or action == "":
               hand.giveCard(self.deck)
               if (hand.getValue() > 21):
@@ -340,8 +351,10 @@ class Game():
       self.setAreAllHandsPassed()
 
   # TODO: Preguntar si se permite más de un return en un método
-  def setAreAllHandsPassed(self):
-    allHandsPassed = True
+  def setAreAllHandsPassed(self) -> None:
+
+    allHandsPassed: bool = True
+
     for player in self.players:
       for hand in player.hands:
         if hand.getState() != HAND_STATE_DICTIONARY["PASADA"]:
@@ -349,7 +362,7 @@ class Game():
 
     self.areAllHandsPassed = allHandsPassed
 
-  def croupierTurn(self):
+  def croupierTurn(self) -> None:
     if not self.gameBlackjack:
       time.sleep(3)
       os.system("cls")
@@ -372,16 +385,17 @@ class Game():
 
       self.showTable()
       time.sleep(3)
+      os.system("cls")
       
-  def warnBlackjack(self):
+  def warnBlackjack(self) -> None:
     for player in self.players:
       if player.getIsBlackjack():
         print(f"\n*** BLACKJACK DE {player.getName().upper()} ***")
         player.hands[0].setBet(int(player.hands[0].getBet() * (3 / 2)))
         player.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
 
-  def showFinalTable(self):
-    os.system("cls")
+  def showFinalTable(self) -> None:
+
     print("TABLERO FINAL")
     if self.gameBlackjack:
       self.croupier.hands[0].setState(HAND_STATE_DICTIONARY["CERRADA"])
@@ -394,12 +408,12 @@ class Game():
       self.warnBlackjack()
       
     time.sleep(3)
-
-  def countResult(self):
     os.system("cls")
+
+  def countResult(self) -> None:
     for player in self.players:
       print(f"CONTABILIZACIÓN DE RESULTADOS {player.name}")
-      totalProfit: str = 0
+      totalProfit: int = 0
       for hand in player.hands:
 
         resultOfBet = hand.getBet()
@@ -415,9 +429,9 @@ class Game():
       print(f"\nResultado de la partida: {"+" if totalProfit > 0 else ""}{totalProfit}€ {"(BLACKJACK)" if self.gameBlackjack and player.getIsBlackjack() else ""}")
       player.addBalance(totalProfit)
 
-  def restartGame(self):
+  def restartGame(self) -> bool:
     print(f"\n\n¿{"Quieres" if len(self.players) == 1 else "Quereis"} jugar otra partida?")
-    action = input("[S]í [N]o: ").upper()
+    action: str = input("[S]í [N]o: ").upper()
     if action == "S" or action == "":
       os.system("cls")
       self.gameNumber += 1
@@ -436,7 +450,7 @@ class Game():
     return True if action == "S" or action == "" else False
 
 
-def main():
+def main() -> None:
   os.system("cls")
 
   deck: Deck = Deck(Card)
@@ -464,9 +478,4 @@ def main():
 if __name__ == "__main__":
   main()
 
-  
-# TODO: Tipar todos los métodos
-# TODO: Enmarcar tablero con los signos de las cartas (hacer método)
 # TODO: Hacer una cartera con la que empieces con X dinero (ej: 100€)
-
-
