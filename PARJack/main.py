@@ -4,7 +4,7 @@ import os
 import random
 
 class TERMINAL_COLORS:
-  FAIL = '\033[91m'
+  RED = '\033[91m'
   BLACK = '\033[2;37m'
   RESTART = '\033[0m'
 
@@ -34,10 +34,10 @@ CARDS_DICTIONARY = {
 }
 
 CARD_TYPE_DICTIONARY = {
-  1: f"{TERMINAL_COLORS.BLACK}♠{TERMINAL_COLORS.RESTART}",
-  2: f"{TERMINAL_COLORS.FAIL}♥{TERMINAL_COLORS.RESTART}",
-  3: f"{TERMINAL_COLORS.BLACK}♣{TERMINAL_COLORS.RESTART}",
-  4: f"{TERMINAL_COLORS.FAIL}♦{TERMINAL_COLORS.RESTART}"
+  1: "♠",
+  2: "♥",
+  3: "♣",
+  4: "♦"
 }
 
 
@@ -53,6 +53,9 @@ class Card():
   
   def getType(self) -> str:
     return CARD_TYPE_DICTIONARY[self.cardIndex // 13 + 1]
+  
+  def getTypeId(self) -> int:
+    return self.cardIndex // 13 + 1
 
 # TODO: preguntar (object)
 class Strategy():
@@ -90,7 +93,7 @@ class Strategy():
       # Se ha cambiado el mazo
       self.cardsDropped = 1
       self.account = 0
-    self.account += Estrategia.CONT[card.getValue() - 1]
+    self.account += Strategy.CONT[card.getValue() - 1]
 
   def bestBet(self, lowBet: int, mediumBet: int, highBet: int) -> int:
     """ Indica la apuesta que se debe realizar dado el estado del juego.
@@ -175,6 +178,9 @@ class Player():
     self.hands = [Hand()]
     self.isBlackjack = False
   
+  def getHandsLength(self) -> int:
+    return len(self.hands)
+
   def getName(self) -> str:
     return self.name
 
@@ -213,9 +219,9 @@ class Player():
           bet = int(bet)
 
         if (bet != Game.LOW_BET and bet != Game.MEDIUM_BET and bet != Game.HIGH_BET):
-          print("Apuesta no válida.\n")
+          print("Apuesta no válida.")
       except ValueError:
-        print("Apuesta no válida.\n")
+        print("Apuesta no válida.")
 
     return bet
 
@@ -227,7 +233,7 @@ class Player():
       self.hands[0].giveCard(deck)
     else:
       self.hands[0].giveCard(deck, 2)
-      # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
+     # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
 
   def showHands(self) -> None:
 
@@ -251,10 +257,10 @@ class Player():
         lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
 
       for card in hand.cards:
-        lines[0].append("╭───╮")
-        lines[1].append(f"│{card.toString().rjust(3)}│")
-        lines[2].append(f"│{card.getType().ljust(len(card.getType()) + 2)}│") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
-        lines[3].append("╰───╯")
+        lines[0].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}╭───╮{TERMINAL_COLORS.RESTART}")
+        lines[1].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}│{card.toString().rjust(3)}│{TERMINAL_COLORS.RESTART}")
+        lines[2].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}│{card.getType().ljust(3)}│{TERMINAL_COLORS.RESTART}") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
+        lines[3].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}╰───╯{TERMINAL_COLORS.RESTART}")
       
       if (i < len(self.hands) - 1):
 
@@ -333,8 +339,11 @@ class Game():
   LOW_BET = 2
   MEDIUM_BET = 10
   HIGH_BET = 50
+  LOW_DELAY = 1
+  MEDIUM_DELAY = 2
+  HIGH_DELAY = 3
 
-  def __init__(self, players: list[Player], croupier: Player, deck: Deck, gameMode: str):
+  def __init__(self, players: list[Player], croupier: Player, deck: Deck):
     """
     Inicializa un nuevo objeto Game.
 
@@ -347,8 +356,19 @@ class Game():
     self.deck = deck
     self.gameBlackjack = False
     self.gameNumber = 1
-    self.gameMode = GAME_MODES.JUEGO if gameMode == "J" or gameMode == "" else GAME_MODES.ANALISIS
+    self.gameMode = self.askGameMode()
     self.gamesAmount = self.askGamesAmount() if self.gameMode == GAME_MODES.ANALISIS else 0
+
+  def askGameMode(self) -> str:
+    gameMode: str = ""
+    while gameMode != GAME_MODES.JUEGO and gameMode != GAME_MODES.ANALISIS:
+      gameMode = input("¿Qué modo de juego quieres? [J]uego [A]nálisis: ").upper()
+      if gameMode == "":
+        gameMode = GAME_MODES.JUEGO
+  
+      if gameMode != GAME_MODES.JUEGO and gameMode != GAME_MODES.ANALISIS:
+        print("Modo no válido. Inténtalo de nuevo.\n")
+    return gameMode
 
   def askGamesAmount(self) -> int:
     gamesAmount: int = 0
@@ -377,14 +397,12 @@ class Game():
         bestBet: int = self.deck.strategy.bestBet(Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET)
 
         print(f"\n¿Apuesta de {player.getName()}? [{Game.LOW_BET}] [{Game.MEDIUM_BET}] [{Game.HIGH_BET}]: ", end="")
-        time.sleep(1)
+        time.sleep(Game.LOW_DELAY)
         print(bestBet)
-        time.sleep(1)
-
+        time.sleep(Game.LOW_DELAY)
         player.setInitialBet(bestBet) 
       
       os.system("cls")
-
 
       player.giveHand(self.deck)
       if player.hands[0].getValue() == 21:
@@ -392,12 +410,12 @@ class Game():
         self.gameBlackjack = True
 
     print(f"╭────────────────────────────╮\n│         BARAJEANDO         │\n╰────────────────────────────╯")
-    time.sleep(2)
+    time.sleep(Game.MEDIUM_DELAY)
     os.system("cls")
 
     print("REPARTO INICIAL")
     self.showTable()
-    time.sleep(2)
+    time.sleep(Game.MEDIUM_DELAY)
 
 
   def showTable(self) -> None:
@@ -417,22 +435,20 @@ class Game():
 
         for i, hand in enumerate(player.hands):
           
-       
           while hand.state == "ABIERTA":
             self.showTablePlayersTurn(playerName = player.getName())
             
-            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue()
+            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue() and player.getHandsLength() < 4
             action: str = ""
             if self.gameMode == GAME_MODES.JUEGO:
               action = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ").upper()
             else:
               action = self.deck.strategy.bestPlay(self.croupier.hands[0].cards[0], hand.cards)
-              time.sleep(1)
+              time.sleep(Game.LOW_DELAY)
               print(f"\n¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ", end="")
-              time.sleep(1)
+              time.sleep(Game.LOW_DELAY)
               print(action)
-              time.sleep(1)
-
+              time.sleep(Game.LOW_DELAY)
 
             if action == "P" or action == "":
               hand.giveCard(self.deck)
@@ -477,14 +493,14 @@ class Game():
 
   def croupierTurn(self) -> None:
     if not self.gameBlackjack:
-      time.sleep(3)
+      time.sleep(Game.HIGH_DELAY)
       os.system("cls")
       print("TURNO DEL CROUPIER")
       if not self.areAllHandsPassed():
 
         while self.croupier.hands[0].getValue() < Game.MIN_CROUPIER_CARDS:
           self.showTable()
-          time.sleep(2)
+          time.sleep(Game.MEDIUM_DELAY)
           os.system("cls")
           self.croupier.hands[0].giveCard(self.deck)
 
@@ -497,7 +513,7 @@ class Game():
         self.croupier.hands[0].setState(HAND_STATES.CERRADA)
 
       self.showTable()
-      time.sleep(3)
+      time.sleep(Game.HIGH_DELAY)
       os.system("cls")
       
   def warnBlackjack(self) -> None:
@@ -508,7 +524,7 @@ class Game():
         player.hands[0].setState(HAND_STATES.CERRADA)
 
   def showFinalTable(self) -> None:
-
+    os.system("cls")
     print("TABLERO FINAL")
     if self.gameBlackjack:
       self.croupier.hands[0].setState(HAND_STATES.CERRADA)
@@ -520,7 +536,7 @@ class Game():
     if self.gameBlackjack:
       self.warnBlackjack()
       
-    time.sleep(3)
+    time.sleep(Game.HIGH_DELAY)
     os.system("cls")
 
   def countResult(self) -> None:
@@ -558,9 +574,9 @@ class Game():
         action = "N"
 
       print(f"\n\n¿{"Quieres" if len(self.players) == 1 else "Quereis"} jugar otra partida? [S]í [N]o: ", end="")
-      time.sleep(1)
+      time.sleep(Game.LOW_DELAY)
       print(action)
-      time.sleep(1)
+      time.sleep(Game.LOW_DELAY)
 
     if action == "S" or action == "":
       os.system("cls")
@@ -586,14 +602,14 @@ def main() -> None:
   strategy: Strategy = Strategy(decksAmount = Deck.DECKS_NUM)
   deck: Deck = Deck(cardClass = Card, strategy = strategy)
 
-  print("\n\n♠ ♥ ♦ ♣ BLACKJACK - PARADIGMAS DE PROGRAMACIÓN 2023/24 ♠ ♥ ♦ ♣\n\n")
-  gameMode: str = input("¿Modo de ejecución? [J]uego [A]nálisis: ").upper()
+  print("♠ ♥ ♦ ♣ BLACKJACK - PARADIGMAS DE PROGRAMACIÓN 2023/24 ♠ ♥ ♦ ♣\n\n")
+
 
 
   croupier: Player = Player(name = "Croupier", isCroupier = True)
   player: Player = Player(name = "Mano")
 
-  game: Game = Game(players = [player], croupier = croupier, deck = deck, gameMode = gameMode)
+  game: Game = Game(players = [player], croupier = croupier, deck = deck)
 
   continuePlaying: bool = True
 
