@@ -1,4 +1,4 @@
-from externo import Estrategia
+from externo import CartaBase, Mazo, Estrategia
 import time
 import os
 import random
@@ -41,130 +41,29 @@ CARD_TYPE_DICTIONARY = {
 }
 
 
-class Card():
-  def __init__(self, cardIndex: int) -> None:
-    self.cardIndex = cardIndex
+class Card(CartaBase):
+  def __init__(self, ind: int) -> None:
+    self.ind = ind
 
   def getValue(self) -> int:
-    return min(10, self.cardIndex % 13 + 1)
+    return min(10, self.ind % 13 + 1)
 
   def toString(self) -> str:
-    return CARDS_DICTIONARY[self.cardIndex % 13 + 1]
+    return CARDS_DICTIONARY[self.ind % 13 + 1]
   
   def getType(self) -> str:
-    return CARD_TYPE_DICTIONARY[self.cardIndex // 13 + 1]
+    return CARD_TYPE_DICTIONARY[self.ind // 13 + 1]
   
   def getTypeId(self) -> int:
-    return self.cardIndex // 13 + 1
+    return self.ind // 13 + 1
 
-# TODO: preguntar (object)
-class Strategy():
-  """ Clase que representa una estrategia de juego para el Blackjack
-      Basada en el libro que muestra Alan en Resacón en las Vegas
-  """
-  # Matrices de estrategia: Filas suma de valores de cartas del jugador (ases = 1), columnas valor carta del croupier
-  # Matriz para jugadas con 2 cartas del mismo valor (inicio fila 2)
-  MATD: list[str] = ['S' * 10, *['P' + 'S' * 6 + 'PPP'] * 2, 'P' * 4 + 'SS' + 'P' * 4, 'P' + 'D' * 8 + 'P',
-                      'P' + 'S' * 6 + 'PPP', 'P' + 'S' * 7 + 'PP', 'S' * 10, 'C' + 'S' * 5 + 'CSSC', 'C' * 10]
-  # Matriz para jugadas con algún as (inicio fila 3, suma debe dividirse por 2)
-  MATA: list[str] = [*['P' * 4 + 'DD' + 'P' * 4] * 2, *['PPPDDD' + 'P' * 4] * 2, 'PP' + 'D' * 4 + 'P' * 4,
-                      'PC' + 'D' * 4 + 'CCPP', *['C' * 10] * 3]
-  # Matriz para jugadas sin ases ni duplicados (inicio fila 4)
-  MATN: list[str] = [*['P' * 10] * 5, 'P' + 'D' * 5 + 'P' * 4, 'P' + 'D' * 8 + 'P', 'D' * 10,
-                      'P' * 3 + 'C' * 3 + 'P' * 4, *['P' + 'C' * 5 + 'P' * 4] * 4, *['C' * 10] * 5]
-  # Vector de estrategia de conteo
-  CONT: list[int] = [-2, 2, 2, 2, 3, 2, 1, 0, -1, -2]
-
-  def __init__(self, decksAmount: int) -> None:
-    """ Crea e inicializa la estrategia
-    :param decksAmount: Número de barajas del mazo utilizado en el juego
-    """
-    self.decksAmount = decksAmount
-    self.cardsDropped = 0
-    self.account = 0
-
-  def registerDropCard(self, card: Card) -> None:
-    """ Este método se llama automáticamente por el objeto Mazo cada vez
-        que se reparte una carta
-    :param card: La carta que se ha repartido
-    """
-    self.cardsDropped += 1
-    if self.cardsDropped >= 52 * self.decksAmount:
-      # Se ha cambiado el mazo
-      self.cardsDropped = 1
-      self.account = 0
-    self.account += Strategy.CONT[card.getValue() - 1]
-
-  def bestBet(self, lowBet: int, mediumBet: int, highBet: int) -> int:
-    """ Indica la apuesta que se debe realizar dado el estado del juego.
-        Elige entre 3 valores posibles (baja, media y alta)
-    :param lowBet: El valor de la apuesta baja
-    :param mediumBet: El valor de la apuesta media
-    :param highBet: El valor de la apuesta alta
-    :return: Uno de los 3 valores posibles de apuesta
-    """
-    remainingDecks: int = self.decksAmount - self.cardsDropped // 52
-    trueCount: float = self.account / remainingDecks
-    if trueCount > 1.0:
-      return highBet
-    elif trueCount < -1.0:
-      return lowBet
-    else:
-      return mediumBet
-
-  def bestPlay(self, firstCroupierCard: Card, playerHand: list[Card]) -> str:
-    """ Indica la mejor opción dada la mano del croupier (que se supone que
-        consta de una única carta) y la del jugador
-    :param croupier: La carta del croupier
-    :param jugador: La lista de cartas de la mano del jugador
-    :return: La mejor opción: 'P' (pedir), 'D' (doblar), 'C' (cerrar) o 'S' (separar)
-    """
-    croupierHandValue = firstCroupierCard.getValue()
-    playerHandValue = sum(playerCard.getValue() for playerCard in playerHand)
-
-    if len(playerHand) == 2 and playerHand[0].getValue() == playerHand[1].getValue():
-        
-        return Strategy.MATD[playerHandValue // 2 - 1][croupierHandValue - 1]
-    
-    if any(card.getValue() == 1 for card in playerHand) and playerHandValue < 12:
-        
-        return Strategy.MATA[playerHandValue - 3][croupierHandValue - 1]
-    
-    return Strategy.MATN[playerHandValue - 4][croupierHandValue - 1]
-
-class Deck():
-
-  DECKS_NUM = 2
-
-  def __init__(self, cardClass: type[Card], strategy: Strategy) -> None:
-
-    self.cardClass = cardClass
-    self.strategy = strategy
-    self.cards = []
-
-  def dropCard(self) -> Card:
-
-    if len(self.cards) == 0:
-      indexes: list[int] = list(range(52)) * Deck.DECKS_NUM
-      random.shuffle(indexes)
-      self.cards = [self.cardClass(i) for i in indexes]
-
-    cardToDrop: Card = self.cards.pop()
-
-    if self.strategy is not None:
-      self.strategy.registerDropCard(cardToDrop)
-
-    return cardToDrop
-
-  def resetDeck(self) -> None:
-    self.cards = []
 
 class Player():
   """
   Esta es la clase Player. Esta clase representa a un jugador en el juego.
   """
 
-  def __init__(self, name: str, isCroupier: bool = False) -> None:
+  def __init__(self, name: str | None = None, isCroupier: bool = False) -> None:
     """
     Inicializa un nuevo objeto Player.
 
@@ -172,12 +71,28 @@ class Player():
         name (str): El nombre del jugador.
     """
 
-    self.name = name
+    self.name = name if name is not None else self.askName()
     self.isCroupier = isCroupier
     self.balance = 0
     self.hands = [Hand()]
     self.isBlackjack = False
   
+  def askName(self) -> str:
+    """
+    Pregunta al usuario el nombre del jugador y devuelve el nombre ingresado.
+
+    Returns:
+        str: El nombre del jugador.
+    """
+
+    name: str = ""
+    while name == "":
+      name = input("¿Cuál es tu nombre?: ")
+      if name == "":
+        print("Nombre no válido. Inténtalo de nuevo.\n")
+
+    return name
+
   def getHandsLength(self) -> int:
     return len(self.hands)
 
@@ -208,7 +123,7 @@ class Player():
 
   def askBet(self) -> int:
     bet: int = 0
-    while bet != Game.LOW_BET and bet != Game.MEDIUM_BET and bet != Game.HIGH_BET:
+    while bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
 
       try:
         bet = input(f"\n¿Apuesta de {self.name}? [{Game.LOW_BET}] [{Game.MEDIUM_BET}] [{Game.HIGH_BET}]: ")
@@ -218,14 +133,14 @@ class Player():
         else:
           bet = int(bet)
 
-        if (bet != Game.LOW_BET and bet != Game.MEDIUM_BET and bet != Game.HIGH_BET):
+        if bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
           print("Apuesta no válida.")
       except ValueError:
         print("Apuesta no válida.")
 
     return bet
 
-  def giveHand(self, deck: Deck) -> None:
+  def giveHand(self, deck: Mazo) -> None:
     """
     Inicia una nueva partida para el jugador, repartiendo una o dos cartas dependiendo de si es croupier o no.
     """
@@ -242,7 +157,7 @@ class Player():
     for i, hand in enumerate(self.hands):
 
       handNameLength: int = len(self.getName()) + len(hand.getId())
-      handShift: int = handNameLength if (handNameLength >= 8) else 8 # 8 es la longitud de "Croupier", que es el nombre más largo
+      handShift: int = handNameLength if handNameLength >= 8 else 8 # 8 es la longitud de "Croupier", que es el nombre más largo
       
       lines[0].append(f"{self.name}{hand.id}:".rjust(handShift + 1))
       lines[1].append(f"({hand.getValue()})".rjust(handShift + 1))
@@ -257,10 +172,11 @@ class Player():
         lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
 
       for card in hand.cards:
-        lines[0].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}╭───╮{TERMINAL_COLORS.RESTART}")
-        lines[1].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}│{card.toString().rjust(3)}│{TERMINAL_COLORS.RESTART}")
-        lines[2].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}│{card.getType().ljust(3)}│{TERMINAL_COLORS.RESTART}") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
-        lines[3].append(f"{TERMINAL_COLORS.RED if card.getTypeId() == 2 or card.getTypeId() == 4 else TERMINAL_COLORS.BLACK}╰───╯{TERMINAL_COLORS.RESTART}")
+        cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
+        lines[0].append(f"{cardColor}╭───╮{TERMINAL_COLORS.RESTART}")
+        lines[1].append(f"{cardColor}│{card.toString().rjust(3)}│{TERMINAL_COLORS.RESTART}")
+        lines[2].append(f"{cardColor}│{card.getType().ljust(3)}│{TERMINAL_COLORS.RESTART}") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
+        lines[3].append(f"{cardColor}╰───╯{TERMINAL_COLORS.RESTART}")
       
       if (i < len(self.hands) - 1):
 
@@ -310,31 +226,57 @@ class Hand():
   def setBet(self, bet: int) -> None:
     self.bet = bet
 
-  def giveCard(self, deck: Deck, amount: int = 1) -> None:
+  def giveCard(self, deck: Mazo, amount: int = 1) -> None:
     for _ in range(amount):
-      self.cards.append(deck.dropCard())
+      self.cards.append(deck.reparte())
 
   def getValue(self) -> int:
     handValue: int = 0
     countOfAces: int = 0
 
     for card in self.cards:
-      handValue += card.getValue()
-      if card.getValue() == 1:
+      handValue += card.valor
+      if card.valor == 1:
         countOfAces += 1
-
-    for _ in range(countOfAces):
-      if handValue + 10 <= 21:
-        handValue += 10  
+    
+    if countOfAces > 0 and handValue + 10 <= Game.MAX_CARDS_VALUE:
+      handValue += 10
 
     return handValue
   
 
 class Game():
   """
-  Esta es la clase Game. Esta clase representa el juego en sí.
+  La clase Game representa un juego de PARJack (Blackjack).
+  Administra los jugadores, el crupier, la baraja y el flujo del juego.
+
+  Atributos:
+  - MAX_CARDS_VALUE: El valor máximo de las cartas en una mano (por defecto: 21)
+  - MIN_CROUPIER_CARDS: El valor mínimo de las cartas que debe tener el crupier antes de detenerse (por defecto: 17)
+  - LOW_BET: La cantidad de apuesta baja (por defecto: 2)
+  - MEDIUM_BET: La cantidad de apuesta media (por defecto: 10)
+  - HIGH_BET: La cantidad de apuesta alta (por defecto: 50)
+  - LOW_DELAY: El tiempo de espera bajo en segundos (por defecto: 1)
+  - MEDIUM_DELAY: El tiempo de espera medio en segundos (por defecto: 2)
+  - HIGH_DELAY: El tiempo de espera alto en segundos (por defecto: 3)
+
+  Métodos:
+  - __init__(self, players: list[Player], croupier: Player, deck: Mazo): Inicializa un nuevo juego con los jugadores, el crupier y la baraja dados.
+  - askGameMode(self) -> str: Pregunta al usuario el modo de juego (Juego o Análisis) y devuelve el modo seleccionado.
+  - askGamesAmount(self) -> int: Pregunta al usuario el número de juegos a jugar en el modo de análisis y devuelve la cantidad seleccionada.
+  - startGame(self) -> None: Inicia el juego inicializando las manos, estableciendo las apuestas iniciales y barajando la baraja.
+  - showTable(self) -> None: Muestra el estado actual de la mesa, incluyendo la mano del crupier y las manos de los jugadores.
+  - showTablePlayersTurn(self, playerName: str) -> None: Muestra el estado actual de la mesa durante el turno de un jugador.
+  - playersTurn(self) -> None: Administra los turnos de los jugadores, permitiéndoles tomar decisiones (pedir, doblar, cerrar, separar).
+  - areAllHandsPassed(self) -> bool: Verifica si todas las manos en la mesa se han pasado (superado 21).
+  - croupierTurn(self) -> None: Administra el turno del crupier, permitiéndole tomar cartas hasta alcanzar el valor mínimo.
+  - warnBlackjack(self) -> None: Verifica si algún jugador tiene un blackjack y ajusta su apuesta en consecuencia.
+  - showFinalTable(self) -> None: Muestra el estado final de la mesa después de que se hayan jugado todos los turnos.
+  - countResult(self) -> None: Calcula y muestra los resultados del juego para cada jugador.
+  - restartGame(self) -> bool: Pregunta al usuario si desea jugar otra partida y devuelve True si lo desea, False en caso contrario.
   """
 
+  MAX_CARDS_VALUE = 21
   MIN_CROUPIER_CARDS = 17
   LOW_BET = 2
   MEDIUM_BET = 10
@@ -343,13 +285,14 @@ class Game():
   MEDIUM_DELAY = 2
   HIGH_DELAY = 3
 
-  def __init__(self, players: list[Player], croupier: Player, deck: Deck):
+  def __init__(self, players: list[Player], croupier: Player, deck: Mazo):
     """
-    Inicializa un nuevo objeto Game.
+    Inicializa un nuevo juego con los jugadores, el crupier y la baraja dados.
 
-    Args:
-        players (list[Player]): La lista de jugadores.
-        deck (Deck): El mazo de cartas.
+    Parámetros:
+    - players (list[Player]): Una lista de objetos Player que representan a los jugadores en el juego.
+    - croupier (Player): Un objeto Player que representa al crupier.
+    - deck (Mazo): Un objeto Mazo que representa la baraja de cartas.
     """
     self.players = players
     self.croupier = croupier
@@ -360,17 +303,31 @@ class Game():
     self.gamesAmount = self.askGamesAmount() if self.gameMode == GAME_MODES.ANALISIS else 0
 
   def askGameMode(self) -> str:
+    """
+    Pregunta al usuario el modo de juego (Juego o Análisis) y devuelve el modo seleccionado.
+
+    Retorna:
+    - str: El modo de juego seleccionado.
+    """
+
     gameMode: str = ""
-    while gameMode != GAME_MODES.JUEGO and gameMode != GAME_MODES.ANALISIS:
+    while gameMode not in [GAME_MODES.JUEGO, GAME_MODES.ANALISIS]:
       gameMode = input("¿Qué modo de juego quieres? [J]uego [A]nálisis: ").upper()
       if gameMode == "":
         gameMode = GAME_MODES.JUEGO
-  
-      if gameMode != GAME_MODES.JUEGO and gameMode != GAME_MODES.ANALISIS:
+
+      if gameMode not in [GAME_MODES.JUEGO, GAME_MODES.ANALISIS]:
         print("Modo no válido. Inténtalo de nuevo.\n")
     return gameMode
 
   def askGamesAmount(self) -> int:
+    """
+    Pregunta al usuario el número de juegos a jugar en el modo de análisis y devuelve la cantidad seleccionada.
+
+    Retorna:
+    - int: El número de juegos seleccionado.
+    """
+
     gamesAmount: int = 0
     while gamesAmount <= 0:
       try:
@@ -381,78 +338,90 @@ class Game():
         print("Número no válido. Inténtalo de nuevo.\n")
     return gamesAmount
 
-
   def startGame(self) -> None:
     """
-    Inicia una nueva partida.
+    Inicia el juego inicializando las manos, estableciendo las apuestas iniciales y barajando la baraja.
     """
-    os.system("cls")
+
+    clearScreen()
     self.croupier.giveHand(self.deck)
     for player in self.players:
       print(f"--- INICIO DE LA PARTIDA #{self.gameNumber} --- BALANCE = {"+" if player.getBalance() > 0 else ""}{player.getBalance()} €")
-      
+
       if self.gameMode == GAME_MODES.JUEGO:
         player.setInitialBet(player.askBet())
       else:
-        bestBet: int = self.deck.strategy.bestBet(Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET)
+        bestBet: int = self.deck.estrategia.apuesta(apu_lo = Game.LOW_BET, apu_med = Game.MEDIUM_BET, apu_hi = Game.HIGH_BET)
 
         print(f"\n¿Apuesta de {player.getName()}? [{Game.LOW_BET}] [{Game.MEDIUM_BET}] [{Game.HIGH_BET}]: ", end="")
         time.sleep(Game.LOW_DELAY)
         print(bestBet)
         time.sleep(Game.LOW_DELAY)
-        player.setInitialBet(bestBet) 
-      
-      os.system("cls")
+        player.setInitialBet(bestBet)
+
+      clearScreen()
 
       player.giveHand(self.deck)
-      if player.hands[0].getValue() == 21:
+      if player.hands[0].getValue() == Game.MAX_CARDS_VALUE:
         player.setIsBlackjack(True)
         self.gameBlackjack = True
 
     print(f"╭────────────────────────────╮\n│         BARAJEANDO         │\n╰────────────────────────────╯")
     time.sleep(Game.MEDIUM_DELAY)
-    os.system("cls")
+    clearScreen()
 
     print("REPARTO INICIAL")
     self.showTable()
     time.sleep(Game.MEDIUM_DELAY)
 
-
   def showTable(self) -> None:
+    """
+    Muestra el estado actual de la mesa, incluyendo la mano del crupier y las manos de los jugadores.
+    """
+
     self.croupier.showHands()
     for player in self.players:
       player.showHands()
 
   def showTablePlayersTurn(self, playerName: str) -> None:
-    os.system("cls")
+    """
+    Muestra el estado actual de la mesa durante el turno de un jugador.
+
+    Parámetros:
+    - playerName (str): El nombre del jugador cuyo turno se está mostrando.
+    """
+
+    clearScreen()
     print(f"TURNO DE {playerName.upper()}")
     self.showTable()
 
   def playersTurn(self) -> None:
+    """
+    Administra los turnos de los jugadores, permitiéndoles tomar decisiones (pedir, doblar, cerrar, separar).
+    """
 
     if not self.gameBlackjack:
       for player in self.players:
-
         for i, hand in enumerate(player.hands):
-          
           while hand.state == "ABIERTA":
             self.showTablePlayersTurn(playerName = player.getName())
-            
-            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].getValue() == hand.cards[1].getValue() and player.getHandsLength() < 4
+
+            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor and player.getHandsLength() < 4
             action: str = ""
+
             if self.gameMode == GAME_MODES.JUEGO:
               action = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ").upper()
             else:
-              action = self.deck.strategy.bestPlay(self.croupier.hands[0].cards[0], hand.cards)
+              action = self.deck.estrategia.jugada(self.croupier.hands[0].cards[0], hand.cards)
               time.sleep(Game.LOW_DELAY)
               print(f"\n¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ", end="")
               time.sleep(Game.LOW_DELAY)
               print(action)
               time.sleep(Game.LOW_DELAY)
 
-            if action == "P" or action == "":
+            if action in ["P", ""]:
               hand.giveCard(self.deck)
-              if (hand.getValue() > 21):
+              if hand.getValue() > Game.MAX_CARDS_VALUE:
                 hand.setState(HAND_STATES.PASADA)
                 self.showTablePlayersTurn(playerName = player.getName())
 
@@ -460,10 +429,8 @@ class Game():
               hand.giveCard(self.deck)
               hand.setBet(hand.bet * 2)
 
-
-              if (hand.getValue() > 21):
+              if hand.getValue() > Game.MAX_CARDS_VALUE:
                 hand.setState(HAND_STATES.PASADA)
-              
               else:
                 hand.setState(HAND_STATES.CERRADA)
 
@@ -472,17 +439,20 @@ class Game():
             elif action == "C":
               hand.setState(HAND_STATES.CERRADA)
               self.showTablePlayersTurn(playerName = player.name)
-            
+
             elif action == "S" and canSplitHand:
-                player.splitHand(i)
-                
+              player.splitHand(i)
+
             else:
               print("Acción no válida. Inténtalo de nuevo.\n")
 
-
-
-
   def areAllHandsPassed(self) -> bool:
+    """
+    Verifica si todas las manos en la mesa se han pasado (superado 21).
+
+    Retorna:
+    - bool: True si todas las manos se han pasado, False en caso contrario.
+    """
 
     for player in self.players:
       for hand in player.hands:
@@ -492,31 +462,37 @@ class Game():
     return True
 
   def croupierTurn(self) -> None:
+    """
+    Administra el turno del crupier, permitiéndole tomar cartas hasta alcanzar el valor mínimo.
+    """
+
     if not self.gameBlackjack:
       time.sleep(Game.HIGH_DELAY)
-      os.system("cls")
+      clearScreen()
       print("TURNO DEL CROUPIER")
       if not self.areAllHandsPassed():
-
         while self.croupier.hands[0].getValue() < Game.MIN_CROUPIER_CARDS:
           self.showTable()
           time.sleep(Game.MEDIUM_DELAY)
-          os.system("cls")
+          clearScreen()
           self.croupier.hands[0].giveCard(self.deck)
 
-          if self.croupier.hands[0].getValue() > 21:
+          if self.croupier.hands[0].getValue() > Game.MAX_CARDS_VALUE:
             self.croupier.hands[0].setState(HAND_STATES.PASADA)
           print("TURNO DEL CROUPIER")
-
 
       if self.croupier.hands[0].getState() == HAND_STATES.ABIERTA:
         self.croupier.hands[0].setState(HAND_STATES.CERRADA)
 
       self.showTable()
       time.sleep(Game.HIGH_DELAY)
-      os.system("cls")
-      
+      clearScreen()
+
   def warnBlackjack(self) -> None:
+    """
+    Verifica si algún jugador tiene un blackjack y ajusta su apuesta en consecuencia.
+    """
+
     for player in self.players:
       if player.getIsBlackjack():
         print(f"\n*** BLACKJACK DE {player.getName().upper()} ***")
@@ -524,7 +500,11 @@ class Game():
         player.hands[0].setState(HAND_STATES.CERRADA)
 
   def showFinalTable(self) -> None:
-    os.system("cls")
+    """
+    Muestra el estado final de la mesa después de que se hayan jugado todos los turnos.
+    """
+    
+    clearScreen()
     print("TABLERO FINAL")
     if self.gameBlackjack:
       self.croupier.hands[0].setState(HAND_STATES.CERRADA)
@@ -532,16 +512,20 @@ class Game():
         player.hands[0].setState(HAND_STATES.CERRADA)
 
     self.showTable()
-    
+
     if self.gameBlackjack:
       self.warnBlackjack()
-      
+
     time.sleep(Game.HIGH_DELAY)
-    os.system("cls")
+    clearScreen()
 
   def countResult(self) -> None:
+    """
+    Calcula y muestra los resultados del juego para cada jugador.
+    """
+
     for player in self.players:
-      print(f"CONTABILIZACIÓN DE RESULTADOS {player.name}")
+      print(f"CONTABILIZACIÓN DE RESULTADOS {player.name.upper()}")
       totalProfit: int = 0
       for hand in player.hands:
 
@@ -559,6 +543,9 @@ class Game():
       player.addBalance(totalProfit)
 
   def restartGame(self) -> bool:
+    """
+    Pregunta al usuario si desea jugar otra partida y devuelve True si lo desea, False en caso contrario.
+    """
 
     action: str = ""
 
@@ -573,21 +560,23 @@ class Game():
       else:
         action = "N"
 
-      print(f"\n\n¿{"Quieres" if len(self.players) == 1 else "Quereis"} jugar otra partida? [S]í [N]o: ", end="")
+      print(f"\n\n¿{"Quieres" if len(self.players) == 1 else "Queréis"} jugar otra partida? [S]í [N]o: ", end="")
       time.sleep(Game.LOW_DELAY)
       print(action)
       time.sleep(Game.LOW_DELAY)
 
-    if action == "S" or action == "":
-      os.system("cls")
+    if action in ["S", ""]:
+      clearScreen()
       self.gameNumber += 1
       self.gameBlackjack = False
       self.croupier.resetPlayer()
       for player in self.players:
         player.resetPlayer()
-      self.deck.resetDeck()
+
+      # ! NO USO UN MÉTODO POR QUE LA CLASE Mazo NO TIENE UN MÉTODO PARA REINICIAR EL MAZO (no voy a hacer una clase propia solo para hacer ese método)
+      self.deck.cartas = []
     else:
-      os.system("cls")
+      clearScreen()
       print("REGISTRO FINAL DE BALANCE\n")
       for player in self.players:
         print(f"{player.getName()} -> {"+" if player.getBalance() > 0 else ""}{player.getBalance()}€")
@@ -595,16 +584,25 @@ class Game():
 
     return True if action == "S" or action == "" else False
 
+def clearScreen() -> None:
+  if os.name == "nt":
+    # * Windows
+    os.system("cls")
+  else:
+    # * Linux / Mac
+    os.system("clear")
 
 def main() -> None:
-  os.system("cls")
+  """
+  La función principal del juego. Inicializa el juego y administra el flujo del juego.
+  """
 
-  strategy: Strategy = Strategy(decksAmount = Deck.DECKS_NUM)
-  deck: Deck = Deck(cardClass = Card, strategy = strategy)
+  clearScreen()
+
+  strategy: Estrategia = Estrategia(num_barajas = Mazo.NUM_BARAJAS)
+  deck: Mazo = Mazo(clase_carta = Card, estrategia = strategy)
 
   print("♠ ♥ ♦ ♣ BLACKJACK - PARADIGMAS DE PROGRAMACIÓN 2023/24 ♠ ♥ ♦ ♣\n\n")
-
-
 
   croupier: Player = Player(name = "Croupier", isCroupier = True)
   player: Player = Player(name = "Mano")
