@@ -6,6 +6,26 @@
     Atención: En este código se usan type hints para ayudar a documentar el código, pero
     vosotros no estais obligados a usarlo
 """
+import random
+
+
+class CartaBase(object):
+    """ Clase minimalista que representa una carta de la baraja
+        Debería crearse una clase que herede de esta
+    """
+    def __init__(self, ind: int) -> None:
+        """ Crea la carta con ese índice (0-51)
+        :param ind: El índice de la carta
+        """
+        self.ind = ind
+
+    @property
+    def valor(self) -> int:
+        """
+        :return: Valor facial de la carta (1-10). Los ases devuelven 1.
+        """
+        return min(10, self.ind % 13 + 1)
+
 
 class Estrategia(object):
     """ Clase que representa una estrategia de juego para el Blackjack
@@ -32,7 +52,7 @@ class Estrategia(object):
         self.num_cartas = 0
         self.cuenta = 0
 
-    def cuenta_carta(self, carta) -> None:
+    def cuenta_carta(self, carta: CartaBase) -> None:
         """ Este método se llama automáticamente por el objeto Mazo cada vez
             que se reparte una carta
         :param carta: La carta que se ha repartido
@@ -61,7 +81,7 @@ class Estrategia(object):
         else:
             return apu_med
 
-    def jugada(self, croupier, jugador) -> str:
+    def jugada(self, croupier: CartaBase, jugador: list[CartaBase]) -> str:
         """ Indica la mejor opción dada la mano del croupier (que se supone que
             consta de una única carta) y la del jugador
         :param croupier: La carta del croupier
@@ -75,3 +95,36 @@ class Estrategia(object):
         if any(c.valor == 1 for c in jugador) and vj < 12:
             return Estrategia.MATA[vj - 3][vc - 1]
         return Estrategia.MATN[vj - 4][vc - 1]
+
+
+class Mazo(object):
+    """ Clase que representa un mazo de cartas
+    """
+    NUM_BARAJAS = 2
+    SEMILLA = 260
+
+    def __init__(self, clase_carta: type[CartaBase], estrategia: Estrategia) -> None:
+        """ Crea un mazo y le asocia una estrategia
+        :param clase_carta: La clase que representa las cartas
+        :param estrategia: La estrategia asociada
+        """
+        self.clase = clase_carta
+        self.estrategia = estrategia
+        self.cartas = []
+        random.seed(Mazo.SEMILLA)
+
+    def reparte(self) -> CartaBase:
+        """ Reparte una carta del mazo
+            Llama al método cuenta_carta de la estrategia asociada
+        :return: Un objeto carta de la clase indicada en el constructor
+        """
+        if len(self.cartas) == 0:
+            # Se ha acabado el mazo: crear uno nuevo
+            inds = list(range(52)) * Mazo.NUM_BARAJAS
+            random.shuffle(inds)
+            self.cartas = [self.clase(i) for i in inds]
+        c = self.cartas.pop()
+        if self.estrategia is not None:
+            # Se informa a la estrategia de la carta que se reparte
+            self.estrategia.cuenta_carta(c)
+        return c
