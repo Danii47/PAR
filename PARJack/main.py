@@ -1,7 +1,6 @@
 from externo import CartaBase, Mazo, Estrategia
 import time
 import os
-import random
 
 class TERMINAL_COLORS:
   RED = '\033[91m'
@@ -81,7 +80,7 @@ class Player():
     """
     Pregunta al usuario el nombre del jugador y devuelve el nombre ingresado.
 
-    Returns:
+    Retorna:
         str: El nombre del jugador.
     """
 
@@ -152,7 +151,8 @@ class Player():
 
   def showHands(self) -> None:
 
-    lines: list[list[str]] = [[], [], [], []]
+    lines: list[list[str]] = [[] for _ in range(4 if Game.CARD_STYLE == 1 else 7)]
+
 
     for i, hand in enumerate(self.hands):
 
@@ -170,14 +170,30 @@ class Player():
         lines[3].append("".rjust(handShift + 1))
       else:
         lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
-
-      for card in hand.cards:
-        cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
-        lines[0].append(f"{cardColor}╭───╮{TERMINAL_COLORS.RESTART}")
-        lines[1].append(f"{cardColor}│{card.toString().rjust(3)}│{TERMINAL_COLORS.RESTART}")
-        lines[2].append(f"{cardColor}│{card.getType().ljust(3)}│{TERMINAL_COLORS.RESTART}") # Debe dejar 2 espacios a la derecha. El cambio de color no afecta 
-        lines[3].append(f"{cardColor}╰───╯{TERMINAL_COLORS.RESTART}")
       
+
+      if Game.CARD_STYLE == 1:
+        for card in hand.cards:
+          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
+          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───╮{TERMINAL_COLORS.RESTART}")
+          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().rjust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───╯{TERMINAL_COLORS.RESTART}")
+      
+      elif Game.CARD_STYLE == 2:
+        for i in range(4, 7):
+          lines[i].append(" " * (handShift + 1))
+
+        for card in hand.cards:
+          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
+          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───────╮{TERMINAL_COLORS.RESTART}")
+          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
+          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().center(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[4].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
+          lines[5].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().rjust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[6].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───────╯{TERMINAL_COLORS.RESTART}")
+
       if (i < len(self.hands) - 1):
 
         for line in lines:
@@ -196,41 +212,104 @@ class Player():
 
 class Hand():
   """
-  Esta es la clase Hand. Esta clase representa la mano de un jugador en el juego.
+  Representa una mano de cartas en el juego de PARJack (Blackjack).
+
+  Atributos de instancia:
+  - cards (list[Card]): Una lista de objetos Card que representan las cartas en la mano.
+  - state (str): El estado actual de la mano.
+  - bet (int): La cantidad de apuesta realizada en la mano.
+  - id (str): El identificador único de la mano.
+
+  Métodos:
+  - __init__(self, cards: list[Card] | None = None, state: str = HAND_STATES.ABIERTA, bet: int = 0, id: str = ""): Inicializa una nueva mano con las cartas, el estado, la apuesta y el identificador únicos dados.
+  - getBet() -> int: Devuelve la cantidad de apuesta realizada en la mano.
+  - getState() -> str: Devuelve el estado actual de la mano.
+  - getId() -> str: Devuelve el identificador único de la mano.
+  - setId(id: str) -> None: Establece el identificador único de la mano.
+  - setState(state: str) -> None: Establece el estado actual de la mano.
+  - setBet(bet: int) -> None: Establece la cantidad de apuesta realizada en la mano.
+  - giveCard(deck: Mazo, amount: int = 1) -> None: Agrega una o varias cartas a la mano desde un mazo.
+  - getValue() -> int: Calcula y devuelve el valor total de la mano.
   """
 
   def __init__(self, cards: list[Card] | None = None, state: str = HAND_STATES.ABIERTA, bet: int = 0, id: str = ""):
-    """
-    Inicializa un nuevo objeto Hand.
-    """
     self.cards = [] if cards is None else cards
     self.state = state
     self.bet = bet
     self.id = id
   
   def getBet(self) -> int:
+    """
+    Devuelve la cantidad de apuesta realizada en la mano.
+
+    Retorna:
+      int: La cantidad de apuesta realizada en la mano.
+    """
     return self.bet
-    
+  
   def getState(self) -> str:
+    """
+    Devuelve el estado actual de la mano.
+
+    Retorna:
+      str: El estado actual de la mano.
+    """
     return self.state
 
   def getId(self) -> str:
+    """
+    Devuelve el identificador único de la mano.
+
+    Retorna:
+      str: El identificador único de la mano.
+    """
     return self.id
 
   def setId(self, id: str) -> None:
+    """
+    Establece el identificador único de la mano.
+
+    Args:
+      id (str): El identificador único de la mano.
+    """
     self.id = id
 
   def setState(self, state: str) -> None:
+    """
+    Establece el estado actual de la mano.
+
+    Args:
+      state (str): El estado actual de la mano.
+    """
     self.state = state
 
   def setBet(self, bet: int) -> None:
+    """
+    Establece la cantidad de apuesta realizada en la mano.
+
+    Args:
+      bet (int): La cantidad de apuesta realizada en la mano.
+    """
     self.bet = bet
 
   def giveCard(self, deck: Mazo, amount: int = 1) -> None:
+    """
+    Agrega una o varias cartas a la mano desde un mazo.
+
+    Args:
+      deck (Mazo): El mazo del cual se obtendrán las cartas.
+      amount (int, optional): La cantidad de cartas a agregar. Por defecto es 1.
+    """
     for _ in range(amount):
       self.cards.append(deck.reparte())
 
   def getValue(self) -> int:
+    """
+    Calcula y devuelve el valor total de la mano.
+
+    Retorna:
+      int: El valor total de la mano.
+    """
     handValue: int = 0
     countOfAces: int = 0
 
@@ -250,9 +329,11 @@ class Game():
   La clase Game representa un juego de PARJack (Blackjack).
   Administra los jugadores, el crupier, la baraja y el flujo del juego.
 
-  Atributos:
+  Atributos de clase:
   - MAX_CARDS_VALUE: El valor máximo de las cartas en una mano (por defecto: 21)
   - MIN_CROUPIER_CARDS: El valor mínimo de las cartas que debe tener el crupier antes de detenerse (por defecto: 17)
+  - CARD_STYLE: El estilo de las cartas (1: Cartas en 4 líneas, 2: Cartas en 7 líneas) (por defecto: 1)
+  - COLORED_CARDS: Si las cartas se muestran en color (por defecto: False)
   - LOW_BET: La cantidad de apuesta baja (por defecto: 2)
   - MEDIUM_BET: La cantidad de apuesta media (por defecto: 10)
   - HIGH_BET: La cantidad de apuesta alta (por defecto: 50)
@@ -260,6 +341,15 @@ class Game():
   - MEDIUM_DELAY: El tiempo de espera medio en segundos (por defecto: 2)
   - HIGH_DELAY: El tiempo de espera alto en segundos (por defecto: 3)
 
+  Atributos de instancia:
+  - players (list[Player]): Una lista de objetos Player que representan a los jugadores en el juego.
+  - croupier (Player): Un objeto Player que representa al crupier.
+  - deck (Mazo): Un objeto Mazo que representa la baraja de cartas.
+  - gameBlackjack (bool): Si el juego tiene un blackjack.
+  - gameNumber (int): El número de la partida actual.
+  - gameMode (str): El modo de juego (Juego o Análisis).
+  - gamesAmount (int): El número de juegos a jugar en el modo de análisis.
+  
   Métodos:
   - __init__(self, players: list[Player], croupier: Player, deck: Mazo): Inicializa un nuevo juego con los jugadores, el crupier y la baraja dados.
   - askGameMode(self) -> str: Pregunta al usuario el modo de juego (Juego o Análisis) y devuelve el modo seleccionado.
@@ -278,6 +368,8 @@ class Game():
 
   MAX_CARDS_VALUE = 21
   MIN_CROUPIER_CARDS = 17
+  CARD_STYLE = 2
+  COLORED_CARDS = True
   LOW_BET = 2
   MEDIUM_BET = 10
   HIGH_BET = 50
@@ -585,6 +677,10 @@ class Game():
     return True if action == "S" or action == "" else False
 
 def clearScreen() -> None:
+  """
+  Limpia la pantalla de la consola.
+  """
+
   if os.name == "nt":
     # * Windows
     os.system("cls")
