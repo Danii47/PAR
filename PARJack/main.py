@@ -44,9 +44,6 @@ class Card(CartaBase):
   def __init__(self, ind: int) -> None:
     self.ind = ind
 
-  def getValue(self) -> int:
-    return min(10, self.ind % 13 + 1)
-
   def toString(self) -> str:
     return CARDS_DICTIONARY[self.ind % 13 + 1]
   
