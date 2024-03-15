@@ -145,9 +145,11 @@ class Player():
     """
     if (self.isCroupier):
       self.hands[0].giveCard(deck)
+      
     else:
       self.hands[0].giveCard(deck, 2)
-     # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
+      # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
+    
 
   def showHands(self) -> None:
 
@@ -369,7 +371,7 @@ class Game():
   MAX_CARDS_VALUE = 21
   MIN_CROUPIER_CARDS = 17
   CARD_STYLE = 2
-  COLORED_CARDS = True
+  COLORED_CARDS = False
   LOW_BET = 2
   MEDIUM_BET = 10
   HIGH_BET = 50
@@ -665,8 +667,6 @@ class Game():
       for player in self.players:
         player.resetPlayer()
 
-      # ! NO USO UN MÉTODO POR QUE LA CLASE Mazo NO TIENE UN MÉTODO PARA REINICIAR EL MAZO (no voy a hacer una clase propia solo para hacer ese método)
-      self.deck.cartas = []
     else:
       clearScreen()
       print("REGISTRO FINAL DE BALANCE\n")
@@ -715,9 +715,6 @@ def main() -> None:
     game.countResult()
     continuePlaying = game.restartGame()
 
-
 if __name__ == "__main__":
   main()
 
-# TODO: Cambiar color de los números de las cartas
-# TODO: Controlar cuantas partidas juega en modo análisis
