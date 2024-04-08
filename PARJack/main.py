@@ -34,8 +34,8 @@ CARDS_DICTIONARY = {
 
 CARD_TYPE_DICTIONARY = {
   1: "♠",
-  2: "♥",
-  3: "♣",
+  2: "♣",
+  3: "♥",
   4: "♦"
 }
 
@@ -52,160 +52,6 @@ class Card(CartaBase):
   
   def getTypeId(self) -> int:
     return self.ind // 13 + 1
-
-
-class Player():
-  """
-  Esta es la clase Player. Esta clase representa a un jugador en el juego.
-  """
-
-  def __init__(self, name: str | None = None, isCroupier: bool = False) -> None:
-    """
-    Inicializa un nuevo objeto Player.
-
-    Args:
-        name (str): El nombre del jugador.
-    """
-
-    self.name = name if name is not None else self.askName()
-    self.isCroupier = isCroupier
-    self.balance = 0
-    self.hands = [Hand()]
-    self.isBlackjack = False
-  
-  def askName(self) -> str:
-    """
-    Pregunta al usuario el nombre del jugador y devuelve el nombre ingresado.
-
-    Retorna:
-        str: El nombre del jugador.
-    """
-
-    name: str = ""
-    while name == "":
-      name = input("¿Cuál es tu nombre?: ")
-      if name == "":
-        print("Nombre no válido. Inténtalo de nuevo.\n")
-
-    return name
-
-  def getHandsLength(self) -> int:
-    return len(self.hands)
-
-  def getName(self) -> str:
-    return self.name
-
-  def getBalance(self) -> int:
-    return self.balance
-
-  def getIsBlackjack(self) -> bool:
-    return self.isBlackjack
-  
-  def setIsBlackjack(self, isBlackjack: bool) -> None:
-    self.isBlackjack = isBlackjack
-
-  def addBalance(self, balance: int) -> None:
-    self.balance = self.balance + balance
-
-  def resetPlayer(self) -> None:
-    self.isBlackjack = False
-    self.resetHands()
-
-  def resetHands(self) -> None:
-    self.hands = [Hand()]
-
-  def setInitialBet(self, bet: int) -> None:
-    self.hands[0].setBet(bet)
-
-  def askBet(self) -> int:
-    bet: int = 0
-    while bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
-
-      try:
-        bet = input(f"\n¿Apuesta de {self.name}? [{Game.LOW_BET}] [{Game.MEDIUM_BET}] [{Game.HIGH_BET}]: ")
-
-        if bet == "": 
-          bet = Game.MEDIUM_BET
-        else:
-          bet = int(bet)
-
-        if bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
-          print("Apuesta no válida.")
-      except ValueError:
-        print("Apuesta no válida.")
-
-    return bet
-
-  def giveHand(self, deck: Mazo) -> None:
-    """
-    Inicia una nueva partida para el jugador, repartiendo una o dos cartas dependiendo de si es croupier o no.
-    """
-    if (self.isCroupier):
-      self.hands[0].giveCard(deck)
-    else:
-      self.hands[0].giveCard(deck, 2)
-     # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
-
-  def showHands(self) -> None:
-
-    lines: list[list[str]] = [[] for _ in range(4 if Game.CARD_STYLE == 1 else 7)]
-
-    lines =[[], [], [], []]
-    for i, hand in enumerate(self.hands):
-
-      handNameLength: int = len(self.getName()) + len(hand.getId())
-      handShift: int = handNameLength if handNameLength >= 8 else 8 # 8 es la longitud de "Croupier", que es el nombre más largo
-      
-      lines[0].append(f"{self.name}{hand.id}:".rjust(handShift + 1))
-      lines[1].append(f"({hand.getValue()})".rjust(handShift + 1))
-
-      if not self.isCroupier:
-        lines[2].append(f"{hand.getBet()}€".rjust(handShift + 1))
-        lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
-
-      else:
-        lines[2].append(f"{hand.getState()}".rjust(handShift + 1))
-        lines[3].append("".rjust(handShift + 1))
-    
-      
-
-      if Game.CARD_STYLE == 1:
-        for card in hand.cards:
-          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
-          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───╮{TERMINAL_COLORS.RESTART}")
-          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
-          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().rjust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
-          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───╯{TERMINAL_COLORS.RESTART}")
-      
-      elif Game.CARD_STYLE == 2:
-        for i in range(4, 7):
-          lines[i].append(" " * (handShift + 1))
-
-        for card in hand.cards:
-          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [2, 4] else TERMINAL_COLORS.BLACK
-          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───────╮{TERMINAL_COLORS.RESTART}")
-          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
-          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
-          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().center(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
-          lines[4].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
-          lines[5].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().rjust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
-          lines[6].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───────╯{TERMINAL_COLORS.RESTART}")
-
-      if (i < len(self.hands) - 1):
-
-        for line in lines:
-          line.append("│")
-
-    for line in lines:
-      print(" ".join(line))
-    print()
-
-
-  def splitHand(self, handNumber: int):
-    handToSplit: Hand = self.hands[handNumber]
-    self.hands.append(Hand(cards = [handToSplit.cards.pop()], state = HAND_STATES.ABIERTA, bet = handToSplit.bet, id = handToSplit.getId() + "B"))
-    handToSplit.setId(handToSplit.getId() + "A")
-
 
 class Hand():
   """
@@ -320,6 +166,187 @@ class Hand():
 
     return handValue
   
+class Player():
+  """
+  Esta es la clase Player. Esta clase representa a un jugador en el juego.
+
+  Atributos:
+    name (str): El nombre del jugador.
+    isCroupier (bool): Indica si el jugador es el crupier.
+    balance (int): El saldo del jugador.
+    hands (list[Hand]): Las manos del jugador.
+    isBlackjack (bool): Indica si el jugador tiene blackjack.
+
+  Métodos:
+    - __init__(self, name: str | None = None, isCroupier: bool = False): Inicializa un nuevo objeto Player.
+    - askName(self) -> str: Pregunta al usuario el nombre del jugador y devuelve el nombre ingresado.
+    - getHandsLength(self) -> int: Obtiene la cantidad de manos del jugador.
+    - getName(self) -> str: Obtiene el nombre del jugador.
+    - getBalance(self) -> int: Obtiene el saldo del jugador.
+    - getIsBlackjack(self) -> bool: Obtiene el estado de blackjack del jugador.
+    - setIsBlackjack(self, isBlackjack: bool) -> None: Establece el estado de blackjack del jugador.
+    - addBalance(self, balance: int) -> None: Agrega saldo al jugador.
+    - resetPlayer(self) -> None: Reinicia el estado del jugador.
+    - resetHands(self) -> None: Reinicia las manos del jugador.
+    - setInitialBet(self, bet: int) -> None: Establece la apuesta inicial del jugador.
+    - askBet(self) -> int: Pregunta al jugador la apuesta y devuelve el valor ingresado.
+    - giveHand(self, deck: Mazo) -> None: Inicia una nueva partida para el jugador, repartiendo una o dos cartas dependiendo de si es croupier o no.
+    - showHands(self) -> None: Muestra las manos del jugador.
+    - anyHandOpen(self) -> bool: Verifica si alguna mano del jugador está abierta.
+    - splitHand(self, handToSplit: Hand) -> None: Divide una mano en dos manos separadas.
+  """
+
+  def __init__(self, name: str | None = None, isCroupier: bool = False):
+    """
+    Inicializa un nuevo objeto Player.
+
+    Args:
+        name (str): El nombre del jugador.
+    """
+
+    self.name = name if name is not None else self.askName()
+    self.isCroupier = isCroupier
+    self.balance = 0
+    self.hands = [Hand()]
+    self.isBlackjack = False
+  
+  def askName(self) -> str:
+    """
+    Pregunta al usuario el nombre del jugador y devuelve el nombre ingresado.
+
+    Retorna:
+        str: El nombre del jugador.
+    """
+
+    name: str = ""
+    while name == "":
+      name = input("¿Cuál es tu nombre?: ")
+      if name == "":
+        print("Nombre no válido. Inténtalo de nuevo.\n")
+
+    return name
+
+  def getHandsLength(self) -> int:
+    return len(self.hands)
+
+  def getName(self) -> str:
+    return self.name
+
+  def getBalance(self) -> int:
+    return self.balance
+
+  def getIsBlackjack(self) -> bool:
+    return self.isBlackjack
+  
+  def setIsBlackjack(self, isBlackjack: bool) -> None:
+    self.isBlackjack = isBlackjack
+
+  def addBalance(self, balance: int) -> None:
+    self.balance = self.balance + balance
+
+  def resetPlayer(self) -> None:
+    self.isBlackjack = False
+    self.resetHands()
+
+  def resetHands(self) -> None:
+    self.hands = [Hand()]
+
+  def setInitialBet(self, bet: int) -> None:
+    self.hands[0].setBet(bet)
+
+  def askBet(self) -> int:
+    bet: int = 0
+    while bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
+
+      try:
+        bet = input(f"\n¿Apuesta de {self.name}? [{Game.LOW_BET}] [{Game.MEDIUM_BET}] [{Game.HIGH_BET}]: ")
+
+        if bet == "": 
+          bet = Game.MEDIUM_BET
+        else:
+          bet = int(bet)
+
+        if bet not in [Game.LOW_BET, Game.MEDIUM_BET, Game.HIGH_BET]:
+          print("Apuesta no válida.")
+      except ValueError:
+        print("Apuesta no válida.")
+
+    return bet
+
+  def giveHand(self, deck: Mazo) -> None:
+    """
+    Inicia una nueva partida para el jugador, repartiendo una o dos cartas dependiendo de si es croupier o no.
+    """
+    if (self.isCroupier):
+      self.hands[0].giveCard(deck)
+      
+    else:
+      self.hands[0].giveCard(deck, 2)
+      # self.hands[0].cards = [Card(0), Card(9)] # ? Para iniciar con blackjack
+    
+
+  def showHands(self) -> None:
+
+    lines: list[list[str]] = [[] for _ in range(4 if Game.CARD_STYLE == 1 else 7)]
+
+
+    for i, hand in enumerate(self.hands):
+
+      handNameLength: int = len(self.getName()) + len(hand.getId())
+      handShift: int = handNameLength if handNameLength >= 8 else 8 # 8 es la longitud de "Croupier", que es el nombre más largo
+      
+      lines[0].append(f"{self.name}{hand.id}:".rjust(handShift + 1))
+      lines[1].append(f"({hand.getValue()})".rjust(handShift + 1))
+
+      if not self.isCroupier:
+        lines[2].append(f"{hand.getBet()}€".rjust(handShift + 1))
+
+      if self.isCroupier:
+        lines[2].append(f"{hand.getState()}".rjust(handShift + 1))
+        lines[3].append("".rjust(handShift + 1))
+      else:
+        lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
+      
+
+      if Game.CARD_STYLE == 1:
+        for card in hand.cards:
+          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [3, 4] else TERMINAL_COLORS.BLACK
+          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───╮{TERMINAL_COLORS.RESTART}")
+          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().rjust(3)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───╯{TERMINAL_COLORS.RESTART}")
+      
+      elif Game.CARD_STYLE == 2:
+        for i in range(4, 7):
+          lines[i].append(" " * (handShift + 1))
+
+        for card in hand.cards:
+          cardColor: TERMINAL_COLORS = TERMINAL_COLORS.RED if card.getTypeId() in [3, 4] else TERMINAL_COLORS.BLACK
+          lines[0].append(f"{cardColor if Game.COLORED_CARDS else ""}╭───────╮{TERMINAL_COLORS.RESTART}")
+          lines[1].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().ljust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[2].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
+          lines[3].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.getType().center(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[4].append(f"{cardColor if Game.COLORED_CARDS else ""}│{"".center(7)}│{TERMINAL_COLORS.RESTART}")
+          lines[5].append(f"{cardColor if Game.COLORED_CARDS else ""}│{cardColor}{card.toString().rjust(7)}{TERMINAL_COLORS.RESTART if not Game.COLORED_CARDS else ""}│{TERMINAL_COLORS.RESTART}")
+          lines[6].append(f"{cardColor if Game.COLORED_CARDS else ""}╰───────╯{TERMINAL_COLORS.RESTART}")
+
+      if (i < len(self.hands) - 1):
+
+        for line in lines:
+          line.append("│")
+
+    for line in lines:
+      print(" ".join(line))
+    print()
+
+  def anyHandOpen(self):
+    return any(hand.getState() == HAND_STATES.ABIERTA for hand in self.hands)
+
+  def splitHand(self, handToSplit: Hand):
+    self.hands.append(Hand(cards = [handToSplit.cards.pop()], state = HAND_STATES.ABIERTA, bet = handToSplit.bet, id = handToSplit.getId() + "B"))
+    handToSplit.setId(handToSplit.getId() + "A")
+
+  
 
 class Game():
   """
@@ -366,7 +393,8 @@ class Game():
   MAX_CARDS_VALUE = 21
   MIN_CROUPIER_CARDS = 17
   CARD_STYLE = 1
-  COLORED_CARDS = True
+  COLORED_CARDS = False
+  ASK_HAND_UNTIL_CLOSE = False
   LOW_BET = 2
   MEDIUM_BET = 10
   HIGH_BET = 50
@@ -491,49 +519,69 @@ class Game():
 
     if not self.gameBlackjack:
       for player in self.players:
-        for i, hand in enumerate(player.hands):
-          while hand.state == "ABIERTA":
-            self.showTablePlayersTurn(playerName = player.getName())
 
-            canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor and player.getHandsLength() < 4
-            action: str = ""
+        if Game.ASK_HAND_UNTIL_CLOSE: # FORMA PROPIA, LA DE ABAJO ES LA QUE PIDE EL EJERCICIO
 
-            if self.gameMode == GAME_MODES.JUEGO:
-              action = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ").upper()
-            else:
-              action = self.deck.estrategia.jugada(self.croupier.hands[0].cards[0], hand.cards)
-              time.sleep(Game.LOW_DELAY)
-              print(f"\n¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ", end="")
-              time.sleep(Game.LOW_DELAY)
-              print(action)
-              time.sleep(Game.LOW_DELAY)
+          for i in range(len(player.hands)):
 
-            if action in ["P", ""]:
-              hand.giveCard(self.deck)
-              if hand.getValue() > Game.MAX_CARDS_VALUE:
-                hand.setState(HAND_STATES.PASADA)
-                self.showTablePlayersTurn(playerName = player.getName())
+            while player.hands[i].state == "ABIERTA":
 
-            elif action == "D":
-              hand.giveCard(self.deck)
-              hand.setBet(hand.bet * 2)
+              self.askPlayerAction(player, player.hands[i])
 
-              if hand.getValue() > Game.MAX_CARDS_VALUE:
-                hand.setState(HAND_STATES.PASADA)
-              else:
-                hand.setState(HAND_STATES.CERRADA)
+        else:
 
-              self.showTablePlayersTurn(playerName = player.name)
+          while player.anyHandOpen():
 
-            elif action == "C":
-              hand.setState(HAND_STATES.CERRADA)
-              self.showTablePlayersTurn(playerName = player.name)
+            for i in range(len(player.hands)):
 
-            elif action == "S" and canSplitHand:
-              player.splitHand(i)
+              if player.hands[i].state == "ABIERTA":
 
-            else:
-              print("Acción no válida. Inténtalo de nuevo.\n")
+                self.askPlayerAction(player, player.hands[i])
+                
+
+  def askPlayerAction(self, player: Player, hand: Hand) -> None:
+    self.showTablePlayersTurn(playerName = player.getName())
+
+    canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor and player.getHandsLength() < 4
+    action: str = ""
+
+    if self.gameMode == GAME_MODES.JUEGO:
+      action = input(f"{player.getName()}{hand.getId()}: ¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ").upper()
+    else:
+      action = self.deck.estrategia.jugada(self.croupier.hands[0].cards[0], hand.cards)
+      time.sleep(Game.LOW_DELAY)
+      print(f"\n¿Qué quieres hacer? [P]edir [D]oblar [C]errar{" [S]eparar" if canSplitHand else ""}: ", end="")
+      time.sleep(Game.LOW_DELAY)
+      print(action)
+      time.sleep(Game.LOW_DELAY)
+
+    if action in ["P", ""]:
+      hand.giveCard(self.deck)
+      if hand.getValue() > Game.MAX_CARDS_VALUE:
+        hand.setState(HAND_STATES.PASADA)
+        self.showTablePlayersTurn(playerName = player.getName())
+
+    elif action == "D":
+      hand.giveCard(self.deck)
+      hand.setBet(hand.bet * 2)
+
+      if hand.getValue() > Game.MAX_CARDS_VALUE:
+        hand.setState(HAND_STATES.PASADA)
+      else:
+        hand.setState(HAND_STATES.CERRADA)
+
+      self.showTablePlayersTurn(playerName = player.name)
+
+    elif action == "C":
+      hand.setState(HAND_STATES.CERRADA)
+      self.showTablePlayersTurn(playerName = player.name)
+
+    elif action == "S" and canSplitHand:
+      player.splitHand(hand)
+
+    else:
+      print("Acción no válida. Inténtalo de nuevo.\n")
+
 
   def areAllHandsPassed(self) -> bool:
     """
@@ -662,8 +710,6 @@ class Game():
       for player in self.players:
         player.resetPlayer()
 
-      # ! NO USO UN MÉTODO POR QUE LA CLASE Mazo NO TIENE UN MÉTODO PARA REINICIAR EL MAZO (no voy a hacer una clase propia solo para hacer ese método)
-      self.deck.cartas = []
     else:
       clearScreen()
       print("REGISTRO FINAL DE BALANCE\n")
@@ -712,9 +758,7 @@ def main() -> None:
     game.countResult()
     continuePlaying = game.restartGame()
 
-
 if __name__ == "__main__":
   main()
 
-# TODO: Cambiar color de los números de las cartas
-# TODO: Controlar cuantas partidas juega en modo análisis
+
