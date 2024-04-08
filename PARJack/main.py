@@ -150,7 +150,7 @@ class Player():
 
     lines: list[list[str]] = [[] for _ in range(4 if Game.CARD_STYLE == 1 else 7)]
 
-
+    lines =[[], [], [], []]
     for i, hand in enumerate(self.hands):
 
       handNameLength: int = len(self.getName()) + len(hand.getId())
@@ -161,12 +161,12 @@ class Player():
 
       if not self.isCroupier:
         lines[2].append(f"{hand.getBet()}€".rjust(handShift + 1))
+        lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
 
-      if self.isCroupier:
+      else:
         lines[2].append(f"{hand.getState()}".rjust(handShift + 1))
         lines[3].append("".rjust(handShift + 1))
-      else:
-        lines[3].append(f"{hand.getState()}".rjust(handShift + 1))
+    
       
 
       if Game.CARD_STYLE == 1:
@@ -365,7 +365,7 @@ class Game():
 
   MAX_CARDS_VALUE = 21
   MIN_CROUPIER_CARDS = 17
-  CARD_STYLE = 2
+  CARD_STYLE = 1
   COLORED_CARDS = True
   LOW_BET = 2
   MEDIUM_BET = 10
