@@ -1,7 +1,7 @@
 # Primera práctica PAR - Blackjack
 # Autores: Hugo Adán de la Fuente & Daniel Fernández Varona | Grupo T3
 
-from externo import CartaBase, Mazo, Estrategia
+from externo_lunes import CartaBase, Mazo, Estrategia
 import time
 import os
 
@@ -352,7 +352,8 @@ class Player():
     return any(hand.getState() == HAND_STATES.ABIERTA for hand in self.hands)
 
   def splitHand(self, handToSplit: Hand):
-    self.hands.append(Hand(cards = [handToSplit.cards.pop()], bet = handToSplit.bet, id = handToSplit.getId() + "B"))
+    for i in range(1, len(handToSplit.cards)):
+      self.hands.append(Hand(cards = [handToSplit.cards.pop()], bet = handToSplit.bet, id = handToSplit.getId() + chr(ord("A") + i)))
     handToSplit.setId(handToSplit.getId() + "A")
 # endregion
 
@@ -411,6 +412,7 @@ class Game():
   LOW_DELAY = 1
   MEDIUM_DELAY = 2
   HIGH_DELAY = 3
+  SPLIT_WITH_ANY_CARD = True
 
   def __init__(self, players: list[Player], croupier: Player, deck: Mazo):
     """
@@ -495,9 +497,7 @@ class Game():
       if player.hands[0].getValue() == Game.MAX_CARDS_VALUE:
         player.setIsBlackjack(True)
         self.gameBlackjack = True
-    # TODO: Barajeando solo cuando acabe el mazo
-    # print(f"╭────────────────────────────╮\n│         BARAJEANDO         │\n╰────────────────────────────╯")
-    # time.sleep(Game.MEDIUM_DELAY)
+
     clearScreen()
 
     print("REPARTO INICIAL")
@@ -554,8 +554,17 @@ class Game():
 
   def askPlayerAction(self, player: Player, hand: Hand) -> None:
     self.showTablePlayersTurn(playerName = player.getName())
-
-    canSplitHand: bool = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor and player.getHandsLength() < 4
+    canSplitHand: bool = False
+    if Game.SPLIT_WITH_ANY_CARD and len(hand.cards) > 1:
+      canSplitHand = True
+      for i in range(1, len(hand.cards)):
+        if hand.cards[i - 1].valor != hand.cards[i].valor:
+          canSplitHand = False
+          break
+      
+    else:
+      canSplitHand = len(hand.cards) == 2 and hand.cards[0].valor == hand.cards[1].valor and player.getHandsLength() < 4
+    
     action: str = ""
 
     if self.gameMode == GAME_MODES.JUEGO:
