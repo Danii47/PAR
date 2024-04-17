@@ -1,3 +1,10 @@
+""" Paradigmas de Programación, curso 2023/24
+    Código externo para la primera práctica
+    Versión de las defensas del lunes
+    (c) César Vaca
+"""
+
+
 class CartaBase(object):
     def __init__(self, ind):
         self.ind = ind
