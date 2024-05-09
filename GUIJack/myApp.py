@@ -27,26 +27,50 @@ class Card(CartaBase):
 # endregion
 
 class Hand():
-    def __init__(self, sizer, staticText, cards: list[Card] = None, bet = 0) -> None:
+    def __init__(self, panel, sizer, staticText, cards: list[Card] = None, bet = 0, state = "ACTIVA") -> None:
         self.sizer = sizer
         self.staticText = staticText
+        self.panel = panel
         self.bet = bet
         self.cards = [] if not cards else cards
+        self.state = state
 
-    def giveCard(self, deck, amount, gamePanel):
-        for _ in range(amount):
-            cardToAdd = deck.reparte()
-            self.cards.append(cardToAdd)
-            cardBitmap = self.cards[-1].getCardBitmap()
-            staticBitMap = wx.StaticBitmap(gamePanel, wx.ID_ANY, cardBitmap)
 
-            self.sizer.Add(staticBitMap, 0, 0, 0)
-        #print(self.sizer.GetChildren())
-        self.staticText.SetLabel(f"CROUPIER\n(20)\nActiva")
+    def getValue(self) -> int:
 
-    def getHandValue(self):
-        pass
+        handValue: int = 0
+        countOfAces: int = 0
 
+        for card in self.cards:
+            handValue += card.valor
+            if card.valor == 1:
+                countOfAces += 1
+        
+        if countOfAces > 0 and handValue + 10 <= 21:
+            handValue += 10
+
+        return handValue
+    
+    def addCard(self, card):
+        self.cards.append(card)
+        if self.getValue() > 21:
+            self.state = "PASADA"
+            self.panel.SetBackgroundColour(wx.Colour(255, 50, 50))
+
+    def setState(self, state):
+        self.state = state
+
+    def getState(self):
+        return self.state
+
+    def getBet(self):
+        return self.bet
+    
+    def setBet(self, bet):
+        self.bet = bet
+
+    def getPanel(self):
+        return self.panel
 
 class Player():
     def __init__(self, hands: list[Hand] = None, isCroupier = False):
@@ -55,6 +79,23 @@ class Player():
 
     def addHand(self, hand):
         self.hands.append(hand)
+
+    def giveCard(self, deck, amount, indexHand):
+
+        handToGiveCard = self.hands[indexHand]
+
+        for _ in range(amount):
+            cardToAdd = deck.reparte()
+            handToGiveCard.addCard(cardToAdd)
+            cardBitmap = handToGiveCard.cards[-1].getCardBitmap()
+            staticBitMap = wx.StaticBitmap(handToGiveCard.getPanel(), wx.ID_ANY, cardBitmap)
+
+            handToGiveCard.sizer.Add(staticBitMap, 0, 0, 0)
+
+
+
+        handToGiveCard.staticText.SetLabel(f"{"CROUPIER" if self.isCroupier else f"({handToGiveCard.getValue()})"}\n{f"({handToGiveCard.getValue()})" if self.isCroupier else f"{handToGiveCard.getBet()}€"}\n{handToGiveCard.getState()}")
+
 
 class MainWindow(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -230,16 +271,34 @@ class MainWindow(wx.Frame):
         print("Event handler 'handleClickSplitButton' not implemented!")
         event.Skip()
 
-    def addHandToGamePanel(self, player, label, bet = 0):
-        newSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.gamePanelSizer.Add(newSizer, 0, wx.EXPAND, 0)
+    def changePanel(self, event):
+        print("Clico    ")
+        print(event.GetButton())
+        
+    
 
-        newSizerText = wx.StaticText(self.gamePanel, wx.ID_ANY, label, style=wx.ALIGN_CENTER_HORIZONTAL)
+    def addHandToGamePanel(self, player, label = "", bet = 0, cards = None):
+
+        handPanel = wx.Panel(self.gamePanel, wx.ID_ANY, style=wx.TAB_TRAVERSAL, size=wx.Size(0, 120))
+
+
+
+        newSizer = wx.BoxSizer(wx.HORIZONTAL)
+        handPanel.SetSizer(newSizer)
+        handPanel.SetBackgroundColour(wx.Colour(220, 220, 220))
+        handPanel.Bind(wx.EVT_LEFT_UP, self.changePanel)
+
+        # self.Bind(wx.EVT_RADIOBUTTON, self.handleClickManualButton, self.manualButton)
+
+        self.gamePanelSizer.Add(handPanel, 0, wx.EXPAND, 0)
+
+
+        newSizerText = wx.StaticText(handPanel, wx.ID_ANY, label, style=wx.ALIGN_CENTER_HORIZONTAL)
         newSizerText.SetMinSize((145, 200))
         newSizerText.SetFont(wx.Font(20, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
         newSizer.Add(newSizerText, 0, wx.ALL, 10)
 
-        player.addHand(Hand(newSizer, newSizerText, bet))
+        player.addHand(Hand(handPanel, newSizer, newSizerText, cards = cards, bet = bet))
 
 # end of class mainWindow
 
@@ -354,8 +413,12 @@ class Game(wx.App):
         if buttonId != wx.ID_YES:
             self.mainWindow.Close()
            
-        self.mainWindow.addHandToGamePanel(self.mainWindow.croupier, "")
-        self.mainWindow.croupier.hands[0].giveCard(self.mainWindow.deck, 2, self.mainWindow.gamePanel)
+        self.mainWindow.addHandToGamePanel(self.mainWindow.croupier)
+        self.mainWindow.croupier.giveCard(self.mainWindow.deck, 1, 0)
+
+        self.mainWindow.addHandToGamePanel(self.mainWindow.player, bet = self.chooseBetWindow.selectedBet)
+        self.mainWindow.player.giveCard(self.mainWindow.deck, 2, 0)
+
         self.mainWindow.gamePanel.Layout()
 
         return True
