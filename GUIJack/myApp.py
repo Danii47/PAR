@@ -100,9 +100,7 @@ class Player():
 class MainWindow(wx.Frame):
     def __init__(self, *args, **kwds):
 
-        self.player = Player()
-        self.croupier = Player(isCroupier = True)
-        self.deck = Mazo(Card, None)
+        self.selectedBet = 2
 
         # begin wxGlade: mainWindow.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.FULL_REPAINT_ON_RESIZE
@@ -153,18 +151,26 @@ class MainWindow(wx.Frame):
 
         self.askButton = wx.Button(self, wx.ID_ANY, "PEDIR")
         self.askButton.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        self.askButton.Disable()
+
         gameActionSizer.Add(self.askButton, 25, wx.ALL | wx.EXPAND, 2)
 
         self.doubleButton = wx.Button(self, wx.ID_ANY, "DOBLAR")
         self.doubleButton.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        self.doubleButton.Disable()
+
         gameActionSizer.Add(self.doubleButton, 25, wx.ALL | wx.EXPAND, 2)
 
         self.closeButton = wx.Button(self, wx.ID_ANY, "CERRAR")
         self.closeButton.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        self.closeButton.Disable()
+
         gameActionSizer.Add(self.closeButton, 25, wx.ALL | wx.EXPAND, 2)
 
         self.splitButton = wx.Button(self, wx.ID_ANY, "SEPARAR")
         self.splitButton.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        self.splitButton.Disable()
+
         gameActionSizer.Add(self.splitButton, 25, wx.ALL | wx.EXPAND, 2)
 
         self.separatorPanel = wx.Panel(self, wx.ID_ANY)
@@ -243,7 +249,6 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.handleClickSplitButton, self.splitButton)
         # end wxGlade
 
-        self.chooseBet = ChooseBet(None, wx.ID_ANY, "")
         self.blackJackPopUp = BlackJackPopUp(None, wx.ID_ANY, "")
 
 
@@ -271,24 +276,14 @@ class MainWindow(wx.Frame):
         print("Event handler 'handleClickSplitButton' not implemented!")
         event.Skip()
 
-    def changePanel(self, event):
-        print("Clico    ")
-        print(event.GetButton())
-        
-    
 
     def addHandToGamePanel(self, player, label = "", bet = 0, cards = None):
 
-        handPanel = wx.Panel(self.gamePanel, wx.ID_ANY, style=wx.TAB_TRAVERSAL, size=wx.Size(0, 120))
 
-
-
+        handPanel = wx.Panel(self.gamePanel, len(player.hands), style=wx.TAB_TRAVERSAL, size=wx.Size(0, 120))
         newSizer = wx.BoxSizer(wx.HORIZONTAL)
         handPanel.SetSizer(newSizer)
-        handPanel.SetBackgroundColour(wx.Colour(220, 220, 220))
-        handPanel.Bind(wx.EVT_LEFT_UP, self.changePanel)
 
-        # self.Bind(wx.EVT_RADIOBUTTON, self.handleClickManualButton, self.manualButton)
 
         self.gamePanelSizer.Add(handPanel, 0, wx.EXPAND, 0)
 
@@ -298,18 +293,31 @@ class MainWindow(wx.Frame):
         newSizerText.SetFont(wx.Font(20, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
         newSizer.Add(newSizerText, 0, wx.ALL, 10)
 
-        player.addHand(Hand(handPanel, newSizer, newSizerText, cards = cards, bet = bet))
+        newHand = Hand(handPanel, newSizer, newSizerText, cards = cards, bet = bet)
+
+        handPanel.Bind(wx.EVT_LEFT_UP, lambda event: self.changePanel(event, player, newHand))
+
+        player.addHand(newHand)
+    
+    def changePanel(self, event, player, hand):
+        print("Clico    ")
+        print(player)
+        print(hand.cards)
+        print(event.GetEventObject())
+
+        event.GetEventObject().SetBackgroundColour(wx.Colour(100, 200, 50))
+
+        event.GetEventObject().Refresh()
 
 # end of class mainWindow
 
 class ChooseBet(wx.Dialog):
-    def __init__(self, *args, **kwds):
+    def __init__(self, parent, id):
         # begin wxGlade: ChooseBet.__init__
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
-        wx.Dialog.__init__(self, *args, **kwds)
+        wx.Dialog.__init__(self, parent, id, "")
+
         self.SetSize((220, 250))
         self.SetTitle("Nueva partida")
-        self.selectedBet = 2
 
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
@@ -354,7 +362,7 @@ class ChooseBet(wx.Dialog):
 
 
     def setSelectedBet(self, event):
-        self.selectedBet = event.GetId()
+        self.GetParent().selectedBet = event.GetId()
 
     def handleExitScreenBet(self, event):  # wxGlade: ChooseBet.<event_handler>
        self.EndModal(event.GetId())
@@ -401,27 +409,44 @@ class BlackJackPopUp(wx.Dialog):
 
 class Game(wx.App):
     def OnInit(self):
+        self.player = Player()
+        self.croupier = Player(isCroupier = True)
+        self.deck = Mazo(Card, None)
 
         self.mainWindow = MainWindow(None, wx.ID_ANY, "")
-        self.chooseBetWindow = ChooseBet(None, wx.ID_ANY, "")
+        self.chooseBetWindow = ChooseBet(self.mainWindow, wx.ID_ANY)
+        
         self.SetTopWindow(self.mainWindow)
-        self.mainWindow.Show()
-        self.mainWindow.CenterOnScreen()
+        
 
         buttonId = self.chooseBetWindow.ShowModal()
         
         if buttonId != wx.ID_YES:
             self.mainWindow.Close()
-           
-        self.mainWindow.addHandToGamePanel(self.mainWindow.croupier)
-        self.mainWindow.croupier.giveCard(self.mainWindow.deck, 1, 0)
+        else:
+            self.mainWindow.Show()
+            self.mainWindow.CenterOnScreen()
 
-        self.mainWindow.addHandToGamePanel(self.mainWindow.player, bet = self.chooseBetWindow.selectedBet)
-        self.mainWindow.player.giveCard(self.mainWindow.deck, 2, 0)
+        self.startGame()
+       
+
 
         self.mainWindow.gamePanel.Layout()
 
         return True
+    
+    def startGame(self):
+        self.mainWindow.addHandToGamePanel(self.croupier)
+        self.croupier.giveCard(self.deck, 1, 0)
+
+        self.mainWindow.addHandToGamePanel(self.player, bet = self.mainWindow.selectedBet)
+        self.player.giveCard(self.deck, 2, 0)
+
+
+    
+
+
+
 
 # end of class Game
 
