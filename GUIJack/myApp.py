@@ -122,8 +122,6 @@ class Hand():
         self.panel.Refresh()
         self.sizer.Layout()
 
-
-
     def setState(self, state):
         self.state = state
 
@@ -451,10 +449,10 @@ class MainWindow(wx.Frame):
         self.handSelected = hand
 
     def isBlackjack(self):
-        blackJackPopUp = BlackJackPopUp(self, wx.ID_ANY, "")
+       blackJackPopUp = BlackJackPopUp(self, wx.ID_ANY, "")
         
-        self.timer.Stop()
-        blackJackPopUp.ShowModal()
+       self.timer.Stop()
+       blackJackPopUp.ShowModal()
 
     def getSelectedBet(self):
         return self.selectedBet
@@ -583,7 +581,11 @@ class Game(wx.App):
 
         self.startGame()
         if self.mainWindow.blackJack:
-            self.mainWindow.isBlackjack()
+           self.mainWindow.isBlackjack()
+
+        
+
+        self.croupierTurn()
 
         self.mainWindow.gamePanel.Layout()
 
@@ -598,6 +600,28 @@ class Game(wx.App):
 
         if self.player.hands[0].getValue() == 21:
             self.mainWindow.blackJack = True
+
+
+    def croupierTurn(self):
+        while self.croupier.hands[0].getValue() < 17:
+            self.croupier.hands[0].giveCard(self.croupier, self.deck, 1, self.croupier.hands[0].panel)
+            if self.croupier.hands[0].getValue() > 21:
+               self.croupier.hands[0].setState(HAND_STATES.PASSED)
+            else:
+                self.croupier.hands[0].setState(HAND_STATES.CLOSED)
+                self.croupier.hands[0].updateText(self.croupier)
+                self.croupier.hands[0].updateColor()
+
+
+        
+              
+            
+
+
+
+
+
+
 
 
 
