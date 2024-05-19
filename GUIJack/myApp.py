@@ -6,6 +6,7 @@ import random
 class SOUNDS:
     GIVE_CARD = "./utils/sounds/giveCard.wav"
     START_GAME = "./utils/sounds/startGame3CardsSound.wav"
+    CHEERS = "./utils/sounds/cheers.wav"
 
 class COLOURS:
     SELECTED = wx.Colour(236, 247, 181)
@@ -374,6 +375,7 @@ class MainWindow(wx.Frame):
             self.handleClickCloseButton(None)
         elif play == "S":
             self.handleClickSplitButton(None)
+            self.automaticAction -= 1
         
 
     def showResults(self):
@@ -665,6 +667,8 @@ class MainWindow(wx.Frame):
         self.handSelected = hand
 
     def isBlackjack(self):
+
+        winsound.PlaySound(SOUNDS.CHEERS, winsound.SND_ASYNC)
 
         if self.gameMode == GAME_MODES.AUTOMATIC:
             self.automaticTimer.Stop()
