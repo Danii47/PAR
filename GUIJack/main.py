@@ -1,8 +1,15 @@
+# PRÁCTICA 2 - PARADIGMAS DE PROGRAMACIÓN # -*- coding: utf-8 -*-
+#
+
+
+# region Imports
 from externo import CartaBase, Mazo, Estrategia
 import wx
 import winsound
 import random
+# endregion
 
+# region Constants
 class SOUNDS:
     GIVE_CARD = "./utils/sounds/giveCard.wav"
     START_GAME = "./utils/sounds/startGame3CardsSound.wav"
@@ -16,6 +23,7 @@ class COLOURS:
     BLACK = wx.Colour(10 ,10, 10)
     WON = wx.Colour(48, 194, 48)
     LOST = wx.Colour(255, 105, 97)
+    DRAW = wx.Colour(215, 215, 0)
     LOW_COUNTDOWN = wx.Colour(255, 22, 0)
     BACKGROUND = wx.Colour(237, 237, 237)
     NULL = wx.NullColour
@@ -29,6 +37,8 @@ class GAME_MODES:
     MANUAL = "MANUAL"
     AUTOMATIC = "AUTOMATICO"
 
+# endregion
+
 # region Card
 class Card(CartaBase):
     def __init__(self, ind: int) -> None:
@@ -39,8 +49,10 @@ class Card(CartaBase):
 
     def getCardBitmap(self):
         return self.img
+    
 # endregion
 
+# region Hand
 class Hand():
     def __init__(self, panel, sizer, staticText, cards: list[Card] = None, bet = 0, state = HAND_STATES.ACTIVE) -> None:
         self.sizer = sizer
@@ -136,7 +148,11 @@ class Hand():
 
     def getPanel(self):
         return self.panel
+    
+# endregion
 
+
+# region Player
 class Player():
     def __init__(self, hands: list[Hand] = None, isCroupier = False):
         self.hands = [] if not hands else hands
@@ -153,8 +169,11 @@ class Player():
     
     def allHandsPassed(self):
         return all(hand.getState() == HAND_STATES.PASSED for hand in self.hands)
+    
+# endregion
 
 
+# region MainWindow
 class MainWindow(wx.Frame):
     DEFAULT_COUNTDOWN = 10
 
@@ -176,7 +195,6 @@ class MainWindow(wx.Frame):
         self.strategy = strategy
         self.automaticHandCount = 0
 
-        # begin wxGlade: mainWindow.__init__
         wx.Frame.__init__(self, parent, id, title)
 
         self.timer = wx.Timer(self)
@@ -317,7 +335,6 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.handleClickDoubleButton, self.doubleButton)
         self.Bind(wx.EVT_BUTTON, self.handleClickCloseButton, self.closeButton)
         self.Bind(wx.EVT_BUTTON, self.handleClickSplitButton, self.splitButton)
-        # end wxGlade
 
     def handleDelayInput(self, _):
 
@@ -385,7 +402,7 @@ class MainWindow(wx.Frame):
                     self.gameBalance -= hand.getBet()
                     hand.panel.SetBackgroundColour(COLOURS.LOST)
                 else:
-                    hand.panel.SetBackgroundColour(wx.Colour(215, 215, 0))
+                    hand.panel.SetBackgroundColour(COLOURS.DRAW)
             
             elif hand.getState() == HAND_STATES.CLOSED:
                 if hand.getValue() > self.croupier.hands[0].getValue() or self.croupier.hands[0].getState() == HAND_STATES.PASSED:
@@ -396,7 +413,7 @@ class MainWindow(wx.Frame):
                     self.gameBalance -= hand.getBet()
                     hand.panel.SetBackgroundColour(COLOURS.LOST)
                 elif hand.getValue() == self.croupier.hands[0].getValue():
-                    hand.panel.SetBackgroundColour(wx.Colour(215, 215, 0))    
+                    hand.panel.SetBackgroundColour(COLOURS.DRAW)    
             hand.panel.Refresh()
         
         gameBalanceSign = ""
@@ -529,7 +546,7 @@ class MainWindow(wx.Frame):
             self.automaticTimer.Start(self.delayActions)
             self.timer.Stop()
 
-    # ! BOTÓN DE PEDIR CARTA
+    # BOTÓN DE PEDIR CARTA
     def handleClickAskButton(self, _):
         winsound.PlaySound(SOUNDS.GIVE_CARD, winsound.SND_ASYNC)
 
@@ -546,7 +563,7 @@ class MainWindow(wx.Frame):
             self.changeToCroupierTurn()
 
 
-    # ! BOTÓN DE DOBLAR APUESTA
+    # BOTÓN DE DOBLAR APUESTA
     def handleClickDoubleButton(self, _):
         winsound.PlaySound(SOUNDS.GIVE_CARD, winsound.SND_ASYNC)
 
@@ -562,7 +579,7 @@ class MainWindow(wx.Frame):
         if not self.playerSelected.anyHandOpen() and not self.playerSelected.getIsCroupier():
             self.changeToCroupierTurn()
 
-    # ! BOTÓN DE CERRAR MANO
+    # BOTÓN DE CERRAR MANO
     def handleClickCloseButton(self, _):
         self.handSelected.setState(HAND_STATES.CLOSED)
 
@@ -576,7 +593,7 @@ class MainWindow(wx.Frame):
             if not self.playerSelected.anyHandOpen():
                 self.changeToCroupierTurn()
 
-    # ! BOTÓN DE SEPARAR MANO
+    # BOTÓN DE SEPARAR MANO
     def handleClickSplitButton(self, _):
 
         self.handSelected.getPanel().SetBackgroundColour(COLOURS.NULL)
@@ -746,12 +763,13 @@ class MainWindow(wx.Frame):
 
         self.gamePanel.Layout()
 
+# endregion
 
-# end of class mainWindow
 
+# region ChooseBet
 class ChooseBet(wx.Dialog):
     def __init__(self, parent, id):
-        # begin wxGlade: ChooseBet.__init__
+
         wx.Dialog.__init__(self, parent, id, "")
 
         self.SetSize((220, 250))
@@ -802,7 +820,7 @@ class ChooseBet(wx.Dialog):
         self.Bind(wx.EVT_RADIOBUTTON, self.setSelectedBet, self.highBet)
         self.Bind(wx.EVT_BUTTON, self.handleYesButton, self.acceptBet)
         self.Bind(wx.EVT_BUTTON, self.handleNoButton, self.denyBet)
-        # end wxGlade
+
 
     def setSelectedBet(self, event):
         self.GetParent().selectedBet = event.GetId()
@@ -825,10 +843,9 @@ class ChooseBet(wx.Dialog):
         self.EndModal(0)
         self.GetParent().Close()
 
+# endregion
 
-
-# end of class ChooseBet
-
+# region BlackJackPopUp
 class BlackJackPopUp(wx.Dialog):
     def __init__(self, *args, **kwds):
         # begin wxGlade: BlackJackPopUp.__init__
@@ -862,7 +879,6 @@ class BlackJackPopUp(wx.Dialog):
 
         self.Layout()
         self.Centre()
-        # end wxGlade
 
     def handlePressOk(self, event):
 
@@ -881,8 +897,9 @@ class BlackJackPopUp(wx.Dialog):
             self.Close()
             self.GetParent().chooseBetWindow.Show()
 
-# end of class BlackJackPopUp
+# endregion
 
+# region Game
 class Game(wx.App):
     DECKS_NUM = 2
 
@@ -900,14 +917,8 @@ class Game(wx.App):
         self.chooseBetWindow.ShowModal()
 
         return True
-
-
-
-
-
-
-
-# end of class Game
+    
+# endregion
 
 if __name__ == "__main__":
 
