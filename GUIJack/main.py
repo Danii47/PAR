@@ -32,6 +32,7 @@ class HAND_STATES:
     ACTIVE = "ACTIVA"
     PASSED = "PASADA"
     CLOSED = "CERRADA"
+    DECLINED = "RENUNCIADA"
 
 class GAME_MODES:
     MANUAL = "MANUAL"
@@ -101,13 +102,15 @@ class Hand():
             self.panel.SetBackgroundColour(COLOURS.PASSED)
         elif self.getState() == HAND_STATES.CLOSED:
             self.panel.SetBackgroundColour(COLOURS.CLOSED)
+        elif self.getState() == HAND_STATES.DECLINED:
+            self.panel.SetBackgroundColour(COLOURS.PASSED)
 
         self.panel.Refresh()
 
     def updateText(self, player):
         self.staticText.SetLabel(f"{"CROUPIER" if player.isCroupier else f"({self.getValue()})"}\n{f"({self.getValue()})" if player.isCroupier else f"{self.getBet()}€"}\n{self.getState()}")
 
-        if self.getState() == HAND_STATES.PASSED or self.getState() == HAND_STATES.CLOSED:
+        if self.getState() == HAND_STATES.PASSED or self.getState() == HAND_STATES.CLOSED or self.getState() == HAND_STATES.DECLINED:
             self.staticText.SetForegroundColour(COLOURS.WHITE)
 
 
@@ -148,6 +151,9 @@ class Hand():
 
     def getPanel(self):
         return self.panel
+    
+    def getSizer(self):
+        return self.sizer
     
 # endregion
 
@@ -279,6 +285,12 @@ class MainWindow(wx.Frame):
 
         gameActionSizer.Add(self.splitButton, 25, wx.ALL | wx.EXPAND, 2)
 
+        self.declineButton = wx.Button(self, wx.ID_ANY, "RENUNCIAR")
+        self.declineButton.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        self.declineButton.Disable()
+
+        gameActionSizer.Add(self.declineButton, 25, wx.ALL | wx.EXPAND, 2)
+
         self.separatorPanel = wx.Panel(self, wx.ID_ANY)
         gameOptionsSizer.Add(self.separatorPanel, 15, wx.EXPAND, 0)
 
@@ -335,6 +347,24 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.handleClickDoubleButton, self.doubleButton)
         self.Bind(wx.EVT_BUTTON, self.handleClickCloseButton, self.closeButton)
         self.Bind(wx.EVT_BUTTON, self.handleClickSplitButton, self.splitButton)
+        self.Bind(wx.EVT_BUTTON, self.handleClickDeclineButton, self.declineButton)
+
+    def handleClickDeclineButton(self, _):
+        for hand in self.player.hands:
+            if hand.getState() == HAND_STATES.ACTIVE:
+                hand.setState(HAND_STATES.DECLINED)
+                hand.updateColor()
+                hand.updateText(self.player)
+        self.gamePanelSizer.Layout()
+        self.croupier.hands[0].setState(HAND_STATES.CLOSED)
+        self.croupier.hands[0].updateColor()
+        self.croupier.hands[0].updateText(self.croupier)
+
+        self.timer.Stop()
+        self.resetTimer("-")
+
+        self.showResults()
+
 
     def handleDelayInput(self, _):
 
@@ -397,9 +427,9 @@ class MainWindow(wx.Frame):
 
     def showResults(self):
         for hand in self.player.hands:
-            if hand.getState() == HAND_STATES.PASSED:
+            if hand.getState() == HAND_STATES.PASSED or hand.getState() == HAND_STATES.DECLINED:
                 if self.croupier.hands[0].getState() != HAND_STATES.PASSED:
-                    self.gameBalance -= hand.getBet()
+                    self.gameBalance -= int(hand.getBet() * (0.5 if hand.getState() == HAND_STATES.DECLINED else 1))
                     hand.panel.SetBackgroundColour(COLOURS.LOST)
                 else:
                     hand.panel.SetBackgroundColour(COLOURS.DRAW)
@@ -471,6 +501,8 @@ class MainWindow(wx.Frame):
         self.doubleButton.Disable()
         self.closeButton.Disable()
         self.splitButton.Disable()
+        self.declineButton.Disable()
+        
         self.timer.Stop()
         self.resetTimer("-")
         self.automaticTimer.Stop()
@@ -719,10 +751,15 @@ class MainWindow(wx.Frame):
 
         self.addHandToGamePanel(self.croupier, cards = [self.deck.reparte()])
 
-        self.addHandToGamePanel(self.player, bet = self.selectedBet, cards = [self.deck.reparte(), self.deck.reparte()])
+        self.addHandToGamePanel(self.player, bet = self.selectedBet, cards = [self.deck.reparte(), self.deck.reparte(), self.deck.reparte()])
+
 
         if self.player.hands[0].getValue() == 21:
             self.blackJack = True
+
+        elif self.croupier.hands[0].cards[0].valor == 1:
+            self.declineButton.Enable()
+
 
     def restartGameData(self):
         self.player.hands = []
