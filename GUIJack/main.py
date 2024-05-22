@@ -748,7 +748,6 @@ class MainWindow(wx.Frame):
         winsound.PlaySound(SOUNDS.START_GAME, winsound.SND_ASYNC)
 
         self.addHandToGamePanel(self.croupier, cards = [self.deck.reparte()])
-        self.deck.reparte()
         self.addHandToGamePanel(self.player, bet = self.selectedBet, cards = [self.deck.reparte(), self.deck.reparte()])
 
 
