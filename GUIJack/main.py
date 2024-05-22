@@ -422,7 +422,7 @@ class MainWindow(wx.Frame):
             self.handleClickCloseButton(None)
         elif play == "S":
             self.handleClickSplitButton(None)
-            self.automaticAction -= 1
+            self.automaticHandCount -= 1
         
 
     def showResults(self):
