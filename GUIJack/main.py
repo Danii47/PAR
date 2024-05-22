@@ -1,5 +1,5 @@
 # PRÁCTICA 2 - PARADIGMAS DE PROGRAMACIÓN # -*- coding: utf-8 -*-
-#
+# Hugo Adán de la Fuente & Daniel Fernández Varona
 
 
 # region Imports
@@ -32,7 +32,6 @@ class HAND_STATES:
     ACTIVE = "ACTIVA"
     PASSED = "PASADA"
     CLOSED = "CERRADA"
-    DECLINED = "RENUNCIADA"
 
 class GAME_MODES:
     MANUAL = "MANUAL"
@@ -102,15 +101,13 @@ class Hand():
             self.panel.SetBackgroundColour(COLOURS.PASSED)
         elif self.getState() == HAND_STATES.CLOSED:
             self.panel.SetBackgroundColour(COLOURS.CLOSED)
-        elif self.getState() == HAND_STATES.DECLINED:
-            self.panel.SetBackgroundColour(COLOURS.PASSED)
 
         self.panel.Refresh()
 
     def updateText(self, player):
         self.staticText.SetLabel(f"{"CROUPIER" if player.isCroupier else f"({self.getValue()})"}\n{f"({self.getValue()})" if player.isCroupier else f"{self.getBet()}€"}\n{self.getState()}")
 
-        if self.getState() == HAND_STATES.PASSED or self.getState() == HAND_STATES.CLOSED or self.getState() == HAND_STATES.DECLINED:
+        if self.getState() == HAND_STATES.PASSED or self.getState() == HAND_STATES.CLOSED:
             self.staticText.SetForegroundColour(COLOURS.WHITE)
 
 
@@ -352,7 +349,8 @@ class MainWindow(wx.Frame):
     def handleClickDeclineButton(self, _):
         for hand in self.player.hands:
             if hand.getState() == HAND_STATES.ACTIVE:
-                hand.setState(HAND_STATES.DECLINED)
+                hand.setState(HAND_STATES.PASSED)
+                hand.setBet(int(hand.getBet() * 0.5))
                 hand.updateColor()
                 hand.updateText(self.player)
         self.gamePanelSizer.Layout()
@@ -427,9 +425,9 @@ class MainWindow(wx.Frame):
 
     def showResults(self):
         for hand in self.player.hands:
-            if hand.getState() == HAND_STATES.PASSED or hand.getState() == HAND_STATES.DECLINED:
+            if hand.getState() == HAND_STATES.PASSED:
                 if self.croupier.hands[0].getState() != HAND_STATES.PASSED:
-                    self.gameBalance -= int(hand.getBet() * (0.5 if hand.getState() == HAND_STATES.DECLINED else 1))
+                    self.gameBalance -= hand.getBet()
                     hand.panel.SetBackgroundColour(COLOURS.LOST)
                 else:
                     hand.panel.SetBackgroundColour(COLOURS.DRAW)
@@ -737,8 +735,8 @@ class MainWindow(wx.Frame):
         else:
             
             self.selectedBet = self.strategy.apuesta(2, 10, 50)
-            blackJackPopUp.Show()
-            blackJackPopUp.handlePressOk(None)
+            #blackJackPopUp.Show()
+            #blackJackPopUp.handlePressOk(None)
             self.selectBetAutomaticTimer.Start(self.delayActions)
 
 
@@ -750,8 +748,8 @@ class MainWindow(wx.Frame):
         winsound.PlaySound(SOUNDS.START_GAME, winsound.SND_ASYNC)
 
         self.addHandToGamePanel(self.croupier, cards = [self.deck.reparte()])
-
-        self.addHandToGamePanel(self.player, bet = self.selectedBet, cards = [self.deck.reparte(), self.deck.reparte(), self.deck.reparte()])
+        self.deck.reparte()
+        self.addHandToGamePanel(self.player, bet = self.selectedBet, cards = [self.deck.reparte(), self.deck.reparte()])
 
 
         if self.player.hands[0].getValue() == 21:
