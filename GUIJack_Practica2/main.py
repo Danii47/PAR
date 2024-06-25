@@ -1,6 +1,5 @@
-# PRÁCTICA 2 - PARADIGMAS DE PROGRAMACIÓN # -*- coding: utf-8 -*-
-# Hugo Adán de la Fuente & Daniel Fernández Varona
-
+# Segunda práctica PAR - Blackjack con interfaz gráfica
+# Autores: Hugo Adán de la Fuente & Daniel Fernández Varona | Grupo T3
 
 # region Imports
 from externo import CartaBase, Mazo, Estrategia
