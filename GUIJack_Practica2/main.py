@@ -1,18 +1,32 @@
-# Segunda práctica PAR - Blackjack con interfaz gráfica
-# Autores: Hugo Adán de la Fuente & Daniel Fernández Varona | Grupo T3
+# Segunda práctica Paradigmas de Programación - Blackjack con interfaz gráfica
+# Autor: Daniel Fernández Varona
+
+
 
 # region Imports
 from externo import CartaBase, Mazo, Estrategia
 import wx
 import winsound
 import random
+import os
+import sys
 # endregion
+
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta al recurso, funciona para .exe y para modo desarrollo """
+    try:
+        # PyInstaller crea una carpeta temporal y almacena la ruta ahí
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
 
 # region Constants
 class SOUNDS:
-    GIVE_CARD = "./utils/sounds/giveCard.wav"
-    START_GAME = "./utils/sounds/startGame3CardsSound.wav"
-    CHEERS = "./utils/sounds/cheers.wav"
+    GIVE_CARD = resource_path("./utils/sounds/giveCard.wav")
+    START_GAME = resource_path("./utils/sounds/startGame3CardsSound.wav")
+    CHEERS = resource_path("./utils/sounds/cheers.wav")
 
 class COLOURS:
     SELECTED = wx.Colour(236, 247, 181)
@@ -44,7 +58,7 @@ class Card(CartaBase):
         super().__init__(ind)
         self.ind = ind
         self.img = wx.Bitmap()
-        self.img.LoadFile(f"./utils/imgs/cards/m{ind:02d}.png")
+        self.img.LoadFile(resource_path(f"./utils/imgs/cards/m{ind:02d}.png"))
 
     def getCardBitmap(self):
         return self.img
@@ -889,7 +903,7 @@ class BlackJackPopUp(wx.Dialog):
 
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
-        bitmap_1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap("./utils/imgs/blackjack.jpeg", wx.BITMAP_TYPE_ANY))
+        bitmap_1 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(resource_path("./utils/imgs/blackjack.jpeg"), wx.BITMAP_TYPE_ANY))
         sizer_1.Add(bitmap_1, 1, 0, 0)
 
         sizer_2 = wx.StdDialogButtonSizer()

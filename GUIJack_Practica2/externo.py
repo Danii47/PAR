@@ -101,7 +101,7 @@ class Mazo(object):
     """ Clase que representa un mazo de cartas
     """
     NUM_BARAJAS = 2
-    SEMILLA = 260
+    # SEMILLA = 260
 
     def __init__(self, clase_carta: type[CartaBase], estrategia: Estrategia) -> None:
         """ Crea un mazo y le asocia una estrategia
@@ -111,7 +111,7 @@ class Mazo(object):
         self.clase = clase_carta
         self.estrategia = estrategia
         self.cartas = []
-        random.seed(Mazo.SEMILLA)
+        # random.seed(Mazo.SEMILLA)
 
     def reparte(self) -> CartaBase:
         """ Reparte una carta del mazo
